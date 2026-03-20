@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { STATIC_EMPLOYEES, displayName } from "@/components/employees/static-employees";
+import { getEmployeeForDashboard } from "@/features/employees/service.server";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +16,7 @@ export default async function EmployeeDetailPage({
   params: Promise<{ employeeId: string }>;
 }) {
   const { employeeId } = await params;
-  const employee = STATIC_EMPLOYEES.find((e) => e.id === employeeId);
+  const employee = await getEmployeeForDashboard(employeeId);
 
   return (
     <div className="flex min-h-[60vh] flex-col gap-6 p-6">
@@ -32,12 +32,12 @@ export default async function EmployeeDetailPage({
       <Card className="border-neutral-800 bg-neutral-950/40">
         <CardHeader>
           <CardTitle className="text-neutral-200">
-            {employee ? displayName(employee) : "Employee"}
+            {employee ? employee.name : "Employee"}
           </CardTitle>
           <CardDescription className="text-neutral-500">
             {employee
-              ? `${employee.role} · ${employee.verified ? "Verified" : "Unverified"}`
-              : "Foundation placeholder — connect BFF / session runtime later."}
+              ? `${employee.roleCategory} · ${employee.verified ? "Verified" : "Unverified"}`
+              : "Not found or you don't have access."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-neutral-400">
@@ -49,7 +49,7 @@ export default async function EmployeeDetailPage({
           </p>
           {!employee ? (
             <p className="text-neutral-500">
-              No static profile for this id — route still resolves (no 404).
+              This employee doesn&apos;t exist or isn&apos;t in your workspace.
             </p>
           ) : (
             <p>Interaction / ARACHNE runtime will attach here in a later phase.</p>

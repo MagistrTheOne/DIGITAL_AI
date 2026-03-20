@@ -34,7 +34,7 @@ export function Stepper({
       </div>
       <Progress
         value={pct}
-        className="h-1 bg-neutral-800 [&_[data-slot=progress-indicator]]:bg-neutral-400"
+        className="h-1 bg-neutral-800 **:data-[slot=progress-indicator]:bg-neutral-400"
       />
     </div>
   );

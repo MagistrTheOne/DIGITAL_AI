@@ -38,9 +38,9 @@ function progressBarClass(p: number) {
   const t = pressureTone(p);
   return cn(
     "h-2 bg-neutral-800",
-    t === "neutral" && "[&_[data-slot=progress-indicator]]:bg-neutral-400",
-    t === "warn" && "[&_[data-slot=progress-indicator]]:bg-amber-400",
-    t === "critical" && "[&_[data-slot=progress-indicator]]:bg-red-500",
+    t === "neutral" && "**:data-[slot=progress-indicator]:bg-neutral-400",
+    t === "warn" && "**:data-[slot=progress-indicator]:bg-amber-400",
+    t === "critical" && "**:data-[slot=progress-indicator]:bg-red-500",
   );
 }
 
@@ -129,7 +129,7 @@ export function UsagePanel({
         <Separator className="bg-neutral-800" />
 
         <Alert
-          className="border-amber-500/25 bg-amber-500/5 text-amber-100/90 [&_[data-slot=alert-description]]:text-amber-100/70"
+          className="border-amber-500/25 bg-amber-500/5 text-amber-100/90 **:data-[slot=alert-description]:text-amber-100/70"
           variant="default"
         >
           <AlertTitle className="text-sm">Upgrade to unlock headroom</AlertTitle>

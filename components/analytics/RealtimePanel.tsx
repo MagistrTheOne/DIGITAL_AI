@@ -116,7 +116,7 @@ export function RealtimePanel({
               </div>
               <Progress
                 value={Math.min(100, voiceLoadPct)}
-                className="h-1.5 bg-neutral-800 [&_[data-slot=progress-indicator]]:bg-emerald-500/70"
+                className="h-1.5 bg-neutral-800 **:data-[slot=progress-indicator]:bg-emerald-500/70"
               />
             </div>
           </div>

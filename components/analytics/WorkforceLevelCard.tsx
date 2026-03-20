@@ -47,7 +47,7 @@ export function WorkforceLevelCard({
           </div>
           <Progress
             value={workforce.progressPct}
-            className="h-2 bg-neutral-800 [&_[data-slot=progress-indicator]]:bg-violet-500"
+            className="h-2 bg-neutral-800 **:data-[slot=progress-indicator]:bg-violet-500"
           />
         </div>
         <p className="text-sm leading-relaxed text-neutral-400">{workforce.hint}</p>

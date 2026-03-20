@@ -43,35 +43,42 @@ function mapRow(r: typeof employee.$inferSelect): EmployeeRecord {
   };
 }
 
+/** All employees for a user (ordered by name). */
+export async function listEmployeesByUser(
+  userId: string,
+): Promise<EmployeeRecord[]> {
+  if (!userId) return [];
+
+  try {
+    const rows = await db
+      .select()
+      .from(employee)
+      .where(eq(employee.userId, userId))
+      .orderBy(employee.name);
+
+    return rows.map(mapRow);
+  } catch {
+    return [];
+  }
+}
+
 export async function listEmployeesByQuery(
   query: EmployeeListQuery,
 ): Promise<EmployeeRecord[]> {
   if (!query.userId) return [];
 
-  try {
-    const conditions = [eq(employee.userId, query.userId)];
+  let out = await listEmployeesByUser(query.userId);
 
-    const rows = await db
-      .select()
-      .from(employee)
-      .where(and(...conditions))
-      .orderBy(employee.name);
-
-    let out = rows.map(mapRow);
-
-    if (query.role && query.role !== "All") {
-      out = out.filter((r) => r.role_category === query.role);
-    }
-
-    const q = query.q?.trim().toLowerCase();
-    if (q) {
-      out = out.filter((r) => r.name.toLowerCase().includes(q));
-    }
-
-    return out.slice(0, 60);
-  } catch {
-    return [];
+  if (query.role && query.role !== "All") {
+    out = out.filter((r) => r.role_category === query.role);
   }
+
+  const q = query.q?.trim().toLowerCase();
+  if (q) {
+    out = out.filter((r) => r.name.toLowerCase().includes(q));
+  }
+
+  return out.slice(0, 60);
 }
 
 export async function getEmployeeById(

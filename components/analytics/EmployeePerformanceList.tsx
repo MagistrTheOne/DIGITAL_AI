@@ -90,7 +90,7 @@ export function EmployeePerformanceList({
                   </div>
                   <Progress
                     value={Math.min(100, r.successRatePct)}
-                    className="h-1 bg-neutral-800 [&_[data-slot=progress-indicator]]:bg-neutral-500"
+                    className="h-1 bg-neutral-800 **:data-[slot=progress-indicator]:bg-neutral-500"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -102,7 +102,7 @@ export function EmployeePerformanceList({
                   </div>
                   <Progress
                     value={Math.min(100, (r.avgLatencyMs / LATENCY_MAX_MS) * 100)}
-                    className="h-1 bg-neutral-800 [&_[data-slot=progress-indicator]]:bg-neutral-600"
+                    className="h-1 bg-neutral-800 **:data-[slot=progress-indicator]:bg-neutral-600"
                   />
                 </div>
               </div>

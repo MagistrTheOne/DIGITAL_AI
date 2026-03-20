@@ -78,7 +78,7 @@ export function CreateEmployeeWizard() {
         setError(result.error);
         return;
       }
-      router.push(`/employees/${result.employeeId}`);
+      router.push("/ai-digital");
       router.refresh();
     });
   };

@@ -1,7 +1,6 @@
 import Link from "next/link";
 
-import type { StaticEmployee } from "@/components/employees/static-employees";
-import { displayName } from "@/components/employees/static-employees";
+import type { EmployeeDTO } from "@/features/employees/types";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -13,8 +12,8 @@ import { CheckCircle2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export function EmployeeCard({ employee }: { employee: StaticEmployee }) {
-  const name = displayName(employee);
+export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
+  const name = employee.name;
 
   return (
     <Link href={`/employees/${employee.id}`} className="block outline-none">
@@ -50,7 +49,7 @@ export function EmployeeCard({ employee }: { employee: StaticEmployee }) {
           </div>
         </CardHeader>
         <CardContent className="pt-0 text-xs text-neutral-500">
-          {employee.role}
+          {employee.roleCategory}
         </CardContent>
       </Card>
     </Link>

@@ -28,21 +28,32 @@ function toRoleCategory(role: string): EmployeeRoleCategory {
   }
 }
 
+function recordToEmployeeDTO(r: {
+  id: string;
+  name: string;
+  role_category: string;
+  verified: boolean;
+  capabilities: string[];
+  video_preview_url: string | null;
+}): EmployeeDTO {
+  return {
+    id: r.id,
+    name: r.name,
+    roleCategory: toRoleCategory(r.role_category),
+    verified: r.verified,
+    capabilities: r.capabilities,
+    videoPreview: r.video_preview_url
+      ? { src: r.video_preview_url, type: "video/mp4" }
+      : undefined,
+  };
+}
+
 function toEmployeeDTO(
   record: Awaited<ReturnType<typeof getEmployeeById>>,
 ): EmployeeDTO | null {
   if (!record) return null;
 
-  return {
-    id: record.id,
-    name: record.name,
-    roleCategory: toRoleCategory(record.role_category),
-    verified: record.verified,
-    capabilities: record.capabilities,
-    videoPreview: record.video_preview_url
-      ? { src: record.video_preview_url, type: "video/mp4" }
-      : undefined,
-  };
+  return recordToEmployeeDTO(record);
 }
 
 function ensureVantageName(raw: string): string {
@@ -51,23 +62,39 @@ function ensureVantageName(raw: string): string {
   return t.toLowerCase().endsWith("vantage") ? t : `${t} Vantage`;
 }
 
+/** Session-scoped list for AI Digital (server components only). */
+export async function getEmployeesForDashboard(): Promise<{
+  employees: EmployeeDTO[];
+}> {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  if (!userId) return { employees: [] };
+
+  return getEmployeeDashboardDTOs({ userId });
+}
+
 export async function getEmployeeDashboardDTOs(input: EmployeeListQuery): Promise<{
   employees: EmployeeDTO[];
 }> {
   const records = await listEmployeesByQuery(input);
 
   return {
-    employees: records.map((r) => ({
-      id: r.id,
-      name: r.name,
-      roleCategory: toRoleCategory(r.role_category),
-      verified: r.verified,
-      capabilities: r.capabilities,
-      videoPreview: r.video_preview_url
-        ? { src: r.video_preview_url, type: "video/mp4" }
-        : undefined,
-    })),
+    employees: records.map((r) => recordToEmployeeDTO(r)),
   };
+}
+
+/** Single employee for dashboard routes — scoped to current session user. */
+export async function getEmployeeForDashboard(
+  employeeId: string,
+): Promise<EmployeeDTO | null> {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+
+  const record = await getEmployeeById(employeeId, userId);
+  if (!record) return null;
+
+  return recordToEmployeeDTO(record);
 }
 
 export async function getEmployeeSessionBootstrap(
