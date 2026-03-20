@@ -3,13 +3,14 @@
  * Replaces the previous standalone `users` table — run migrations after pulling.
  * @see https://www.better-auth.com/docs/concepts/database
  */
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
   date,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -213,6 +214,32 @@ export const aiMetricsDaily = pgTable(
   ],
 );
 
+/**
+ * AI employees (digital workforce) — scoped per user; behavior in `config` JSONB.
+ */
+export const employee = pgTable(
+  "employees",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    role: text("role").notNull(),
+    status: text("status").notNull().default("active"),
+    config: jsonb("config")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("employees_user_idx").on(table.userId)],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
@@ -220,6 +247,7 @@ export const userRelations = relations(user, ({ many }) => ({
   aiSessions: many(aiSession),
   usageEvents: many(usageEvent),
   aiMetricsDaily: many(aiMetricsDaily),
+  employees: many(employee),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -265,6 +293,13 @@ export const usageEventRelations = relations(usageEvent, ({ one }) => ({
 export const aiMetricsDailyRelations = relations(aiMetricsDaily, ({ one }) => ({
   user: one(user, {
     fields: [aiMetricsDaily.userId],
+    references: [user.id],
+  }),
+}));
+
+export const employeeRelations = relations(employee, ({ one }) => ({
+  user: one(user, {
+    fields: [employee.userId],
     references: [user.id],
   }),
 }));

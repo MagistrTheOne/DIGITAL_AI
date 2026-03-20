@@ -5,7 +5,7 @@ import { and, count, eq, gte, isNull, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { aiSession, usageEvent } from "@/db/schema";
-import { listEmployeesByQuery } from "@/services/db/repositories/employees.repository.server";
+import { listEmployeesByQuery } from "@/services/db/repositories/employees.repository";
 import { getUsageForUser } from "@/services/db/repositories/usage.repository";
 
 import type { EmployeeListQuery } from "@/features/employees/types";
@@ -134,7 +134,7 @@ export async function getEmployeePerformance(
       );
     const activeSet = new Set(open.map((o) => o.employeeId));
 
-    const q: EmployeeListQuery = {};
+    const q: EmployeeListQuery = { userId };
     const employees = await listEmployeesByQuery(q);
     const nameById = new Map(employees.map((e) => [e.id, e.name]));
 

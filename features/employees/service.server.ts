@@ -1,17 +1,21 @@
 import type {
+  CreateEmployeeInput,
   EmployeeDTO,
   EmployeeListQuery,
   EmployeeRoleCategory,
   EmployeeSessionBootstrapDTO,
 } from "@/features/employees/types";
 
+import { getCurrentSession } from "@/lib/auth/session.server";
+import { getPlanForUser } from "@/services/db/repositories/billing.repository";
 import {
+  countEmployeesForUser,
   getEmployeeById,
+  insertEmployeeRow,
   listEmployeesByQuery,
-} from "@/features/employees/repositories/employees.repository.server";
+} from "@/services/db/repositories/employees.repository";
 
 function toRoleCategory(role: string): EmployeeRoleCategory {
-  // Strict mapping to keep UI DTOs stable.
   switch (role) {
     case "CFO":
     case "Marketing":
@@ -24,7 +28,9 @@ function toRoleCategory(role: string): EmployeeRoleCategory {
   }
 }
 
-function toEmployeeDTO(record: Awaited<ReturnType<typeof getEmployeeById>>): EmployeeDTO | null {
+function toEmployeeDTO(
+  record: Awaited<ReturnType<typeof getEmployeeById>>,
+): EmployeeDTO | null {
   if (!record) return null;
 
   return {
@@ -32,11 +38,17 @@ function toEmployeeDTO(record: Awaited<ReturnType<typeof getEmployeeById>>): Emp
     name: record.name,
     roleCategory: toRoleCategory(record.role_category),
     verified: record.verified,
-    capabilities: [],
+    capabilities: record.capabilities,
     videoPreview: record.video_preview_url
       ? { src: record.video_preview_url, type: "video/mp4" }
       : undefined,
   };
+}
+
+function ensureVantageName(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "Agent Vantage";
+  return t.toLowerCase().endsWith("vantage") ? t : `${t} Vantage`;
 }
 
 export async function getEmployeeDashboardDTOs(input: EmployeeListQuery): Promise<{
@@ -44,25 +56,13 @@ export async function getEmployeeDashboardDTOs(input: EmployeeListQuery): Promis
 }> {
   const records = await listEmployeesByQuery(input);
 
-  // Filtering happens at the repository layer later. For now, do a lightweight
-  // pass to make the UI functional even without schema parity.
-  const filtered =
-    input.role && input.role !== "All"
-      ? records.filter((r) => r.role_category === input.role)
-      : records;
-
-  const q = input.q?.trim().toLowerCase();
-  const searched = q
-    ? filtered.filter((r) => r.name.toLowerCase().includes(q))
-    : filtered;
-
   return {
-    employees: searched.map((r) => ({
+    employees: records.map((r) => ({
       id: r.id,
       name: r.name,
       roleCategory: toRoleCategory(r.role_category),
       verified: r.verified,
-      capabilities: [],
+      capabilities: r.capabilities,
       videoPreview: r.video_preview_url
         ? { src: r.video_preview_url, type: "video/mp4" }
         : undefined,
@@ -73,7 +73,10 @@ export async function getEmployeeDashboardDTOs(input: EmployeeListQuery): Promis
 export async function getEmployeeSessionBootstrap(
   employeeId: string,
 ): Promise<EmployeeSessionBootstrapDTO> {
-  const record = await getEmployeeById(employeeId);
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  const record = await getEmployeeById(employeeId, userId);
+
   const employee =
     toEmployeeDTO(record) ?? {
       id: employeeId,
@@ -83,8 +86,6 @@ export async function getEmployeeSessionBootstrap(
       capabilities: [],
     };
 
-  // BFF contract: short-lived websocket token + websocket url.
-  // Real ARACHNE-X token issuing is added later.
   return {
     sessionId: `sess_${employeeId}`,
     employee,
@@ -96,3 +97,59 @@ export async function getEmployeeSessionBootstrap(
   };
 }
 
+/**
+ * Create a new AI employee — plan cap enforced before insert.
+ */
+export async function createEmployee(
+  input: CreateEmployeeInput,
+): Promise<{ ok: true; employeeId: string } | { ok: false; error: string }> {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  if (!userId) return { ok: false, error: "Unauthorized" };
+
+  const plan = await getPlanForUser(userId);
+  const maxEmployees = plan.limits.employees;
+  const current = await countEmployeesForUser(userId);
+  if (maxEmployees !== -1 && current >= maxEmployees) {
+    return {
+      ok: false,
+      error: `Your ${plan.label} plan allows up to ${maxEmployees} AI employees. Upgrade to add more.`,
+    };
+  }
+
+  const name = ensureVantageName(input.name);
+
+  try {
+    const { id } = await insertEmployeeRow({
+      userId,
+      name,
+      role: input.role,
+      status: "active",
+      config: {
+        prompt: input.prompt,
+        capabilities: input.capabilities,
+        avatarPlaceholder: input.avatarPlaceholder ?? null,
+      },
+    });
+
+    return { ok: true, employeeId: id };
+  } catch (err) {
+    if (isPostgresMissingRelationError(err)) {
+      return {
+        ok: false,
+        error:
+          "Database is missing the employees table. From the project root run: npm run db:push (uses DATABASE_URL from .env.local).",
+      };
+    }
+    throw err;
+  }
+}
+
+function isPostgresMissingRelationError(err: unknown): boolean {
+  const code =
+    (err as { code?: string })?.code ??
+    (err as { cause?: { code?: string } })?.cause?.code;
+  if (code === "42P01") return true;
+  const msg = err instanceof Error ? err.message : String(err);
+  return /relation .* does not exist/i.test(msg);
+}

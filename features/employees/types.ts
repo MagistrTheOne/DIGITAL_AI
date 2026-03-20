@@ -26,8 +26,19 @@ export type EmployeeDTO = {
 };
 
 export type EmployeeListQuery = {
+  /** Tenant scope — required for listing. */
+  userId: string;
   q?: string;
   role?: EmployeeRoleFilter;
+};
+
+/** Input for BFF `createEmployee` (onboarding wizard). */
+export type CreateEmployeeInput = {
+  role: EmployeeRoleCategory;
+  name: string;
+  avatarPlaceholder?: string;
+  prompt: string;
+  capabilities: string[];
 };
 
 export type EmployeeSessionBootstrapDTO = {

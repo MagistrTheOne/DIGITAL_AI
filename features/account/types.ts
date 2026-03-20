@@ -16,13 +16,15 @@ export type AccountDashboardDTO = {
 /** Central plan identifiers — backend-only; UI receives human `plan` string from DTO. */
 export type PlanType = "FREE" | "PRO" | "ENTERPRISE" | "GOVTECH";
 
-/** Use `-1` for unlimited sessions or tokens in `limits`. */
+/** Use `-1` for unlimited sessions, tokens, or employees in `limits`. */
 export interface PlanConfig {
   name: PlanType;
   label: string;
   limits: {
     sessions: number;
     tokens: number;
+    /** Max AI employees per workspace; `-1` = unlimited. */
+    employees: number;
   };
   features: string[];
 }

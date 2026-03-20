@@ -11,6 +11,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     limits: {
       sessions: 10,
       tokens: 500_000,
+      employees: 2,
     },
     features: [
       "basic_agents",
@@ -23,6 +24,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     limits: {
       sessions: 100,
       tokens: 5_000_000,
+      employees: 15,
     },
     features: [
       "basic_agents",
@@ -37,6 +39,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     limits: {
       sessions: -1,
       tokens: -1,
+      employees: -1,
     },
     features: [
       "basic_agents",
@@ -54,6 +57,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     limits: {
       sessions: -1,
       tokens: -1,
+      employees: -1,
     },
     features: [
       "basic_agents",

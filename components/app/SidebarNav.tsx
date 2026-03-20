@@ -58,10 +58,7 @@ export function SidebarNav() {
         })}
       </SidebarMenu>
 
-      <div className="mt-3 flex items-center gap-2 text-xs text-neutral-500">
-        <Sparkles className="size-4 shrink-0" />
-        <span>Real-time sessions ready</span>
-      </div>
+
     </SidebarGroup>
   );
 }
