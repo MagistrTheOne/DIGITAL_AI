@@ -240,7 +240,25 @@ export const employee = pgTable(
   (table) => [index("employees_user_idx").on(table.userId)],
 );
 
-export const userRelations = relations(user, ({ many }) => ({
+/** Per-user AI runtime preferences (Settings UI + workers). */
+export const userSettings = pgTable("user_settings", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  tone: text("tone").notNull().default("formal"),
+  language: text("language").notNull().default("en"),
+  voiceEnabled: boolean("voice_enabled").notNull().default(true),
+  latencyVsQuality: integer("latency_vs_quality").notNull().default(62),
+  streaming: boolean("streaming").notNull().default(true),
+  avatarQuality: text("avatar_quality").notNull().default("high"),
+  ttsVoice: text("tts_voice").notNull().default("nova"),
+  sttModel: text("stt_model").notNull().default("whisper-large"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
   accounts: many(account),
   subscriptions: many(subscription),
@@ -248,6 +266,10 @@ export const userRelations = relations(user, ({ many }) => ({
   usageEvents: many(usageEvent),
   aiMetricsDaily: many(aiMetricsDaily),
   employees: many(employee),
+  userSettings: one(userSettings, {
+    fields: [user.id],
+    references: [userSettings.userId],
+  }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -300,6 +322,13 @@ export const aiMetricsDailyRelations = relations(aiMetricsDaily, ({ one }) => ({
 export const employeeRelations = relations(employee, ({ one }) => ({
   user: one(user, {
     fields: [employee.userId],
+    references: [user.id],
+  }),
+}));
+
+export const userSettingsRelations = relations(userSettings, ({ one }) => ({
+  user: one(user, {
+    fields: [userSettings.userId],
     references: [user.id],
   }),
 }));

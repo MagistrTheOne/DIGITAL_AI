@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Upload } from "lucide-react";
 
+import { useSettingsDto } from "@/components/settings/settings-context";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +16,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+function initials(name: string) {
+  const p = name.trim().split(/\s+/).filter(Boolean);
+  if (p.length >= 2) return `${p[0]![0] ?? ""}${p[1]![0] ?? ""}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase() || "?";
+}
+
 export function AccountSection() {
-  const [name, setName] = React.useState("Alex Morgan");
+  const { account } = useSettingsDto();
+  const [name, setName] = React.useState(account.name);
+
+  React.useEffect(() => {
+    setName(account.name);
+  }, [account.name]);
 
   return (
     <Card className="border-neutral-800 bg-neutral-950/50 shadow-none ring-0">
@@ -26,12 +38,12 @@ export function AccountSection() {
           Identity used across your AI workforce and billing profile.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-8">
+      <CardContent className="space-y-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
           <div className="flex flex-col items-center gap-3 sm:items-start">
             <Avatar className="size-20 border border-neutral-800">
               <AvatarFallback className="bg-neutral-800 text-lg text-neutral-200">
-                AM
+                {initials(name)}
               </AvatarFallback>
             </Avatar>
             <Button
@@ -60,6 +72,9 @@ export function AccountSection() {
                 onChange={(e) => setName(e.target.value)}
                 className="border-neutral-800 bg-neutral-900/80 text-neutral-100"
               />
+              <p className="text-xs text-neutral-600">
+                Profile name updates will sync when account API is wired.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="settings-email" className="text-neutral-300">
@@ -69,7 +84,7 @@ export function AccountSection() {
                 id="settings-email"
                 type="email"
                 readOnly
-                value="alex@company.example"
+                value={account.email}
                 className="cursor-not-allowed border-neutral-800 bg-neutral-900/40 text-neutral-400"
               />
               <p className="text-xs text-neutral-600">

@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 
+import { useSettingsDto } from "@/components/settings/settings-context";
 import {
   Card,
   CardContent,
@@ -18,12 +20,43 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { updateArachneSettings } from "@/features/settings/mutations.server";
 
 export function ArachneSection() {
-  const [streaming, setStreaming] = React.useState(true);
-  const [avatarQuality, setAvatarQuality] = React.useState("high");
-  const [ttsVoice, setTtsVoice] = React.useState("nova");
-  const [sttModel, setSttModel] = React.useState("whisper-large");
+  const router = useRouter();
+  const dto = useSettingsDto();
+  const [pending, startTransition] = React.useTransition();
+
+  const [streaming, setStreaming] = React.useState(dto.arachne.streaming);
+  const [avatarQuality, setAvatarQuality] = React.useState(dto.arachne.avatarQuality);
+  const [ttsVoice, setTtsVoice] = React.useState(dto.arachne.ttsVoice);
+  const [sttModel, setSttModel] = React.useState(dto.arachne.sttModel);
+
+  React.useEffect(() => {
+    setStreaming(dto.arachne.streaming);
+    setAvatarQuality(dto.arachne.avatarQuality);
+    setTtsVoice(dto.arachne.ttsVoice);
+    setSttModel(dto.arachne.sttModel);
+  }, [
+    dto.arachne.streaming,
+    dto.arachne.avatarQuality,
+    dto.arachne.ttsVoice,
+    dto.arachne.sttModel,
+  ]);
+
+  const refresh = React.useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  const persist = React.useCallback(
+    (patch: Parameters<typeof updateArachneSettings>[0]) => {
+      startTransition(async () => {
+        const r = await updateArachneSettings(patch);
+        if (r.ok) refresh();
+      });
+    },
+    [refresh],
+  );
 
   return (
     <Card className="border-neutral-800 bg-neutral-950/50 shadow-none ring-0">
@@ -33,7 +66,7 @@ export function ArachneSection() {
           Advanced runtime — streaming, media fidelity, and speech models.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-8">
+      <CardContent className="space-y-8">
         <div className="flex items-center justify-between gap-4 rounded-lg border border-neutral-800 bg-neutral-900/30 px-4 py-3">
           <div className="space-y-0.5">
             <Label htmlFor="arachne-stream" className="text-neutral-200">
@@ -46,7 +79,11 @@ export function ArachneSection() {
           <Switch
             id="arachne-stream"
             checked={streaming}
-            onCheckedChange={setStreaming}
+            disabled={pending}
+            onCheckedChange={(v) => {
+              setStreaming(v);
+              persist({ streaming: v });
+            }}
             className="data-checked:bg-emerald-600"
           />
         </div>
@@ -54,7 +91,14 @@ export function ArachneSection() {
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2">
             <Label className="text-neutral-300">Avatar quality</Label>
-            <Select value={avatarQuality} onValueChange={setAvatarQuality}>
+            <Select
+              value={avatarQuality}
+              disabled={pending}
+              onValueChange={(v) => {
+                setAvatarQuality(v);
+                persist({ avatarQuality: v });
+              }}
+            >
               <SelectTrigger className="w-full border-neutral-800 bg-neutral-900/80 text-neutral-100">
                 <SelectValue />
               </SelectTrigger>
@@ -67,7 +111,14 @@ export function ArachneSection() {
           </div>
           <div className="space-y-2">
             <Label className="text-neutral-300">TTS voice</Label>
-            <Select value={ttsVoice} onValueChange={setTtsVoice}>
+            <Select
+              value={ttsVoice}
+              disabled={pending}
+              onValueChange={(v) => {
+                setTtsVoice(v);
+                persist({ ttsVoice: v });
+              }}
+            >
               <SelectTrigger className="w-full border-neutral-800 bg-neutral-900/80 text-neutral-100">
                 <SelectValue />
               </SelectTrigger>
@@ -83,7 +134,14 @@ export function ArachneSection() {
 
         <div className="space-y-2 sm:max-w-md">
           <Label className="text-neutral-300">STT model</Label>
-          <Select value={sttModel} onValueChange={setSttModel}>
+          <Select
+            value={sttModel}
+            disabled={pending}
+            onValueChange={(v) => {
+              setSttModel(v);
+              persist({ sttModel: v });
+            }}
+          >
             <SelectTrigger className="w-full border-neutral-800 bg-neutral-900/80 text-neutral-100">
               <SelectValue />
             </SelectTrigger>
@@ -94,7 +152,7 @@ export function ArachneSection() {
             </SelectContent>
           </Select>
           <p className="text-xs text-neutral-600">
-            Placeholder labels — swap for your inference catalog.
+            Inference catalog will drive these options at runtime.
           </p>
         </div>
       </CardContent>
