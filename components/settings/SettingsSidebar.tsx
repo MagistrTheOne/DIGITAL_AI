@@ -28,7 +28,7 @@ export function SettingsSidebar({
               type="button"
               onClick={() => onSelect(item.id)}
               className={cn(
-                "flex min-w-[8.5rem] flex-col items-start rounded-lg px-3 py-2.5 text-left transition-colors lg:min-w-0",
+                "flex min-w-34 flex-col items-start rounded-lg px-3 py-2.5 text-left transition-colors lg:min-w-0",
                 isActive
                   ? "bg-neutral-900 text-neutral-100 ring-1 ring-neutral-700"
                   : "text-neutral-400 hover:bg-neutral-900/60 hover:text-neutral-200",
