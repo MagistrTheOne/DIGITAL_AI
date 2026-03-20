@@ -1,58 +1,34 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export function SearchBar({
-  initialQuery = "",
-  basePath = "/ai-digital",
+  value,
+  onChange,
   placeholder = "Search employees",
-  debounceMs = 350,
+  className,
+  id,
 }: {
-  initialQuery?: string;
-  basePath?: string;
+  value: string;
+  onChange: (value: string) => void;
   placeholder?: string;
-  debounceMs?: number;
+  className?: string;
+  id?: string;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const [value, setValue] = React.useState(initialQuery);
-  const didMountRef = React.useRef(false);
-
-  React.useEffect(() => {
-    setValue(initialQuery);
-  }, [initialQuery]);
-
-  React.useEffect(() => {
-    // Avoid pushing an identical URL on first render.
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      return;
-    }
-
-    const handle = window.setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      const trimmed = value.trim();
-      if (trimmed) params.set("q", trimmed);
-      else params.delete("q");
-
-      const qs = params.toString();
-      router.push(qs ? `${basePath}?${qs}` : basePath, { scroll: false });
-    }, debounceMs);
-
-    return () => window.clearTimeout(handle);
-  }, [basePath, debounceMs, router, searchParams, value]);
-
   return (
     <Input
+      id={id}
       type="search"
       value={value}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
+      className={cn(
+        "border-neutral-800 bg-neutral-950/60 text-neutral-200 placeholder:text-neutral-500",
+        className,
+      )}
     />
   );
 }
-

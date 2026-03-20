@@ -22,6 +22,7 @@ export default function SignInPage() {
     setStatus("");
     try {
       const client = authClient as any;
+      // $fetch returns { data, error } — not the JSON body at the top level
       const result = await client.$fetch("/email-otp/send-verification-otp", {
         method: "POST",
         body: {
@@ -29,7 +30,8 @@ export default function SignInPage() {
           type: "sign-in",
         },
       });
-      if (result?.success) {
+      const payload = result?.data ?? result;
+      if (payload?.success) {
         setStatus("OTP code sent. Check your email (or dev console logs).");
       } else {
         setError("Unable to send OTP.");
@@ -54,7 +56,8 @@ export default function SignInPage() {
           otp,
         },
       });
-      if (result?.token || result?.user) {
+      const payload = result?.data ?? result;
+      if (payload?.token || payload?.user) {
         router.push("/ai-digital");
         router.refresh();
         return;

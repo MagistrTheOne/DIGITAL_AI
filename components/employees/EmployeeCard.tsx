@@ -1,60 +1,58 @@
-"use client";
-
 import Link from "next/link";
 
-import type { EmployeeDTO } from "@/features/employees/types";
+import type { StaticEmployee } from "@/components/employees/static-employees";
+import { displayName } from "@/components/employees/static-employees";
 import { Badge } from "@/components/ui/badge";
-import { VideoPlayer } from "@/components/media/VideoPlayer";
-import { CheckCircle2, ShieldCheck } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { CheckCircle2 } from "lucide-react";
 
-export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
+import { cn } from "@/lib/utils";
+
+export function EmployeeCard({ employee }: { employee: StaticEmployee }) {
+  const name = displayName(employee);
+
   return (
-    <Link
-      href={`/employees/${employee.id}`}
-      className="group block rounded-xl border bg-card p-4 shadow-xs transition-transform hover:-translate-y-0.5 hover:shadow-sm"
-    >
-      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted/40">
-        {employee.videoPreview ? (
-          <VideoPlayer
-            src={employee.videoPreview.src}
-            className="size-full object-cover"
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
-            No video preview
-          </div>
+    <Link href={`/employees/${employee.id}`} className="block outline-none">
+      <Card
+        className={cn(
+          "border-neutral-800 bg-neutral-950/40 transition-colors",
+          "hover:border-neutral-600",
         )}
-
-        {employee.verified && (
-          <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-background/80 px-2 py-1 text-xs backdrop-blur">
-            <ShieldCheck className="size-3.5" />
-            <span>Verified</span>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate font-medium">{employee.name}</div>
-          <div className="truncate text-xs text-muted-foreground">
-            {employee.roleCategory}
+      >
+        <div className="aspect-video w-full border-b border-neutral-800 bg-neutral-900">
+          <div className="flex size-full items-center justify-center text-xs text-neutral-500">
+            Preview
           </div>
         </div>
-
-        <div className="shrink-0">
-          <Badge variant={employee.verified ? "secondary" : "outline"}>
-            {employee.verified ? (
-              <>
-                <CheckCircle2 className="size-3.5" />
-                Verified
-              </>
-            ) : (
-              "Unverified"
-            )}
-          </Badge>
-        </div>
-      </div>
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between gap-3">
+            <CardTitle className="text-base font-medium text-neutral-200">
+              {name}
+            </CardTitle>
+            <Badge
+              variant={employee.verified ? "secondary" : "outline"}
+              className="inline-flex shrink-0 items-center gap-1 border-neutral-700 text-neutral-300"
+            >
+              {employee.verified ? (
+                <>
+                  <CheckCircle2 className="size-3.5" />
+                  Verified
+                </>
+              ) : (
+                "Unverified"
+              )}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0 text-xs text-neutral-500">
+          {employee.role}
+        </CardContent>
+      </Card>
     </Link>
   );
 }
-

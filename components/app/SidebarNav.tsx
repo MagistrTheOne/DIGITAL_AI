@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
   LineChart,
   UserPlus,
   Settings,
@@ -20,15 +19,15 @@ import {
 } from "@/components/ui/sidebar";
 
 const NAV_ITEMS: Array<{ href: string; label: string; icon: React.ReactNode }> = [
-  { href: "/ai-digital", label: "AI Digital", icon: <Sparkles /> },
-  { href: "/analytics", label: "Analytics", icon: <LineChart /> },
+  { href: "/ai-digital", label: "AI Digital", icon: <Sparkles className="size-4" /> },
+  { href: "/analytics", label: "Analytics", icon: <LineChart className="size-4" /> },
   {
     href: "/create-employee",
     label: "Create Employee",
-    icon: <UserPlus />,
+    icon: <UserPlus className="size-4" />,
   },
-  { href: "/settings", label: "Settings", icon: <Settings /> },
-  { href: "/premium", label: "Premium", icon: <Gem /> },
+  { href: "/settings", label: "Settings", icon: <Settings className="size-4" /> },
+  { href: "/premium", label: "Premium", icon: <Gem className="size-4" /> },
 ];
 
 export function SidebarNav() {
@@ -47,10 +46,10 @@ export function SidebarNav() {
               <SidebarMenuButton
                 asChild
                 isActive={isActive}
-                className="justify-start"
+                className="justify-start text-neutral-300"
               >
                 <Link href={item.href} className="flex w-full items-center gap-2">
-                  <span className="text-muted-foreground">{item.icon}</span>
+                  <span className="text-neutral-500">{item.icon}</span>
                   <span className="truncate">{item.label}</span>
                 </Link>
               </SidebarMenuButton>
@@ -59,12 +58,10 @@ export function SidebarNav() {
         })}
       </SidebarMenu>
 
-      {/* Placeholder to match sidebar structure; plan indicator/auth goes in footer. */}
-      <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-        <Sparkles className="size-4" />
+      <div className="mt-3 flex items-center gap-2 text-xs text-neutral-500">
+        <Sparkles className="size-4 shrink-0" />
         <span>Real-time sessions ready</span>
       </div>
     </SidebarGroup>
   );
 }
-

@@ -1,53 +1,40 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 
-import type { EmployeeRoleFilter } from "@/features/employees/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 export function FilterTabs({
+  value,
+  onValueChange,
   items,
-  activeValue,
-  basePath,
+  className,
 }: {
-  items: Array<{ value: EmployeeRoleFilter; label: string }>;
-  activeValue: EmployeeRoleFilter;
-  basePath: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  items: Array<{ value: string; label: string }>;
+  className?: string;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {items.map((item) => {
-        const isActive = activeValue === item.value;
-        return (
-          <button
+    <Tabs value={value} onValueChange={onValueChange} className={cn("w-full", className)}>
+      <TabsList
+        variant="line"
+        className="h-auto w-full min-w-0 flex-wrap justify-start gap-0 rounded-none border-b border-neutral-800 bg-transparent p-0"
+      >
+        {items.map((item) => (
+          <TabsTrigger
             key={item.value}
-            type="button"
-            onClick={() => {
-              const params = new URLSearchParams(searchParams.toString());
-              if (item.value === "All") params.delete("role");
-              else params.set("role", item.value);
-
-              const qs = params.toString();
-              router.push(qs ? `${basePath}?${qs}` : basePath, {
-                scroll: false,
-              });
-            }}
-            aria-pressed={isActive}
-            className={[
-              "rounded-full border px-3 py-1 text-xs transition-colors",
-              isActive
-                ? "bg-primary text-primary-foreground"
-                : "bg-background text-muted-foreground hover:text-foreground",
-            ].join(" ")}
+            value={item.value}
+            className="text-neutral-500 data-[state=active]:border-b-2 data-[state=active]:border-neutral-200 data-[state=active]:text-neutral-200"
           >
             {item.label}
-          </button>
-        );
-      })}
-    </div>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {items.map((item) => (
+        <TabsContent key={item.value} value={item.value} className="mt-0 hidden" />
+      ))}
+    </Tabs>
   );
 }
-
