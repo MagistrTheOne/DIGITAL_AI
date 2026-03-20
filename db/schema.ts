@@ -18,6 +18,8 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  /** Assignment only; limits/features live in `features/account/plan-config.ts`. */
+  planType: text("plan_type").notNull().default("FREE"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -94,9 +96,41 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+/**
+ * Subscription rows for billing providers (Polar, Stripe, …).
+ * `plan_type` is assignment; behavior comes from plan-config.
+ */
+export const subscription = pgTable(
+  "subscription",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    planType: text("plan_type").notNull(),
+    status: text("status").notNull(),
+    provider: text("provider"),
+    externalId: text("external_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("subscription_userId_idx").on(table.userId),
+    index("subscription_provider_external_idx").on(
+      table.provider,
+      table.externalId,
+    ),
+  ],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  subscriptions: many(subscription),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -109,6 +143,13 @@ export const sessionRelations = relations(session, ({ one }) => ({
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
+    references: [user.id],
+  }),
+}));
+
+export const subscriptionRelations = relations(subscription, ({ one }) => ({
+  user: one(user, {
+    fields: [subscription.userId],
     references: [user.id],
   }),
 }));
