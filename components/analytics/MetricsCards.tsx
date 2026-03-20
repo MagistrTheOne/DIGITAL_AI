@@ -4,41 +4,57 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { AnalyticsDashboardDTO } from "@/features/analytics/types";
 import { cn } from "@/lib/utils";
 
 const cardSurface = "border-neutral-800 bg-neutral-950/50 text-neutral-200 shadow-none ring-0";
 
-/** Placeholder KPIs — replace via BFF later. */
-const METRICS = [
-  {
-    title: "Cost saved",
-    value: "$12.4k",
-    description: "Vs. equivalent human labor (est.)",
-    trend: { dir: "up" as const, text: "+12%" },
-    period: "Last 7d",
-  },
-  {
-    title: "Sessions handled",
-    value: "1,842",
-    description: "Rolling window",
-    trend: { dir: "up" as const, text: "+18%" },
-    period: "Last 24h",
-  },
-  {
-    title: "Avg response time",
-    value: "1.1s",
-    description: "P50 across workforce",
-    trend: { dir: "down" as const, text: "−120ms" },
-    period: "Last 24h",
-  },
-  {
-    title: "Efficiency gain",
-    value: "+18%",
-    description: "Vs. baseline workflow",
-    trend: { dir: "up" as const, text: "+4pts" },
-    period: "Last 7d",
-  },
-] as const;
+function formatCostUsd(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
+  return `$${n.toFixed(0)}`;
+}
+
+function buildMetrics(kpis: AnalyticsDashboardDTO["kpis"]) {
+  const baselineMs = 1200;
+  const deltaMs = kpis.avgLatencyMs - baselineMs;
+  const latencyTrendDir = deltaMs <= 0 ? ("down" as const) : ("up" as const);
+  const latencyTrendText =
+    deltaMs === 0
+      ? "0ms"
+      : `${deltaMs < 0 ? "−" : "+"}${Math.abs(deltaMs)}ms`;
+
+  return [
+    {
+      title: "Cost saved",
+      value: formatCostUsd(kpis.costSavedUsd),
+      description: "Vs. equivalent human labor (est.)",
+      trend: { dir: "up" as const, text: `+${kpis.efficiencyGainPct.toFixed(1)}%` },
+      period: "Last 30d",
+    },
+    {
+      title: "Sessions handled",
+      value: kpis.sessionsHandled.toLocaleString(),
+      description: "Rolling window",
+      trend: { dir: "up" as const, text: `SR ${kpis.successRatePct.toFixed(1)}%` },
+      period: "Last 30d",
+    },
+    {
+      title: "Avg response time",
+      value: `${(kpis.avgLatencyMs / 1000).toFixed(1)}s`,
+      description: "P50 across workforce",
+      trend: { dir: latencyTrendDir, text: latencyTrendText },
+      period: "Last 30d",
+    },
+    {
+      title: "Efficiency gain",
+      value: `+${kpis.efficiencyGainPct.toFixed(1)}%`,
+      description: "Vs. baseline workflow",
+      trend: { dir: "up" as const, text: `+${kpis.efficiencyGainPct.toFixed(1)}pts` },
+      period: "Last 30d",
+    },
+  ];
+}
 
 function Trend({ dir, text }: { dir: "up" | "down"; text: string }) {
   const up = dir === "up";
@@ -56,10 +72,12 @@ function Trend({ dir, text }: { dir: "up" | "down"; text: string }) {
   );
 }
 
-export function MetricsCards() {
+export function MetricsCards({ kpis }: { kpis: AnalyticsDashboardDTO["kpis"] }) {
+  const metrics = buildMetrics(kpis);
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {METRICS.map((m) => (
+      {metrics.map((m) => (
         <Card key={m.title} size="sm" className={cn(cardSurface)}>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium uppercase tracking-wide text-neutral-500">

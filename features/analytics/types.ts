@@ -1,3 +1,9 @@
+/** Plan caps for usage UI (from billing / plan-config, not part of analytics DTO). */
+export type UsagePlanLimits = {
+  sessionsLimit: number;
+  tokensLimit: number;
+};
+
 /**
  * Aggregated analytics for the dashboard BFF (UI maps these fields when wired).
  */
