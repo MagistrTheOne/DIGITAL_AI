@@ -14,7 +14,7 @@ function filterEmployees(
   role: string,
 ): EmployeeDTO[] {
   const needle = q.trim().toLowerCase();
-  let out = list;
+  let out = list ?? [];
   if (role !== "All") {
     out = out.filter((e) => e.roleCategory === role);
   }
@@ -31,7 +31,13 @@ function filterEmployees(
   return out;
 }
 
-export function EmployeeGrid({ employees }: { employees: EmployeeDTO[] }) {
+export function EmployeeGrid({
+  employees = [],
+}: {
+  employees?: EmployeeDTO[];
+}) {
+  const list = employees ?? [];
+
   const [search, setSearch] = React.useState("");
   const [role, setRole] = React.useState<string>("All");
 
@@ -41,8 +47,8 @@ export function EmployeeGrid({ employees }: { employees: EmployeeDTO[] }) {
   }));
 
   const filtered = React.useMemo(
-    () => filterEmployees(employees, search, role),
-    [employees, search, role],
+    () => filterEmployees(list, search, role),
+    [list, search, role],
   );
 
   return (
