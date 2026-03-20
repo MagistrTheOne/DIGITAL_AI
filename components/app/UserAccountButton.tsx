@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
+import type { AccountDashboardDTO } from "@/features/account/types";
 import { useSidebar } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,26 +22,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-export type UserAccountSnapshot = {
-  name: string;
-  email: string;
-  plan: string;
-  usage: {
-    sessions: string;
-    tokens: string;
-  };
-};
-
-/** Mock defaults — replace with session / BFF when wired. */
-export const MOCK_USER_ACCOUNT: UserAccountSnapshot = {
-  name: "Maxim",
-  email: "ceo@nullxes.com",
-  plan: "Free",
-  usage: {
-    sessions: "3 / 10",
-    tokens: "120k / 500k",
-  },
-};
+/** Alias for consumers that referenced the previous snapshot name. */
+export type UserAccountSnapshot = AccountDashboardDTO;
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -60,14 +43,11 @@ function planBadgeVariant(
 }
 
 export type UserAccountButtonProps = {
-  user?: UserAccountSnapshot;
+  user: AccountDashboardDTO;
   className?: string;
 };
 
-export function UserAccountButton({
-  user = MOCK_USER_ACCOUNT,
-  className,
-}: UserAccountButtonProps) {
+export function UserAccountButton({ user, className }: UserAccountButtonProps) {
   const router = useRouter();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -105,6 +85,9 @@ export function UserAccountButton({
           )}
         >
           <Avatar size="sm" className="shrink-0 border border-neutral-800">
+            {user.image ? (
+              <AvatarImage src={user.image} alt="" />
+            ) : null}
             <AvatarFallback className="bg-neutral-800 text-xs font-medium text-neutral-200">
               {getInitials(user.name)}
             </AvatarFallback>
@@ -134,6 +117,9 @@ export function UserAccountButton({
           </DropdownMenuLabel>
           <div className="mt-2 flex items-start gap-2">
             <Avatar size="sm" className="shrink-0 border border-neutral-800">
+              {user.image ? (
+                <AvatarImage src={user.image} alt="" />
+              ) : null}
               <AvatarFallback className="bg-neutral-800 text-xs font-medium text-neutral-200">
                 {getInitials(user.name)}
               </AvatarFallback>

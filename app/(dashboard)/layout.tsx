@@ -2,17 +2,16 @@ import * as React from "react";
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app/AppShell";
-import { requireUser } from "@/lib/auth/session.server";
+import { getAccountDashboardDTO } from "@/features/account/service.server";
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Server-only gate: ensure authenticated access to the dashboard shell.
-  const user = await requireUser();
-  if (!user) redirect("/sign-in");
+  const account = await getAccountDashboardDTO();
+  if (!account) redirect("/sign-in");
 
-  return <AppShell>{children}</AppShell>;
+  return <AppShell account={account}>{children}</AppShell>;
 }
 

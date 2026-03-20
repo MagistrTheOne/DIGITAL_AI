@@ -15,8 +15,15 @@ import {
 } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/app/SidebarNav";
 import { UserAccountButton } from "@/components/app/UserAccountButton";
+import type { AccountDashboardDTO } from "@/features/account/types";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  account,
+}: {
+  children: React.ReactNode;
+  account: AccountDashboardDTO | null;
+}) {
   return (
     <SidebarProvider defaultOpen>
       <div className="flex min-h-svh w-full bg-neutral-950 text-neutral-200">
@@ -37,7 +44,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SidebarNav />
           </SidebarContent>
           <SidebarFooter className="px-2 pb-3">
-            <UserAccountButton />
+            {account ? (
+              <UserAccountButton user={account} />
+            ) : (
+              <div
+                className="min-h-[52px] rounded-lg border border-transparent"
+                aria-hidden
+              />
+            )}
           </SidebarFooter>
         </Sidebar>
 
