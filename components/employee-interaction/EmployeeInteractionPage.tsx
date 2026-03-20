@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { AnamAvatarPreview } from "@/components/employee-interaction/AnamAvatarPreview";
 import { AvatarStage } from "@/components/employee-interaction/AvatarStage";
 import { ChatInput } from "@/components/employee-interaction/ChatInput";
 import { ChatMessages } from "@/components/employee-interaction/ChatMessages";
@@ -23,9 +24,13 @@ function newId() {
 export function EmployeeInteractionPage({
   displayName,
   roleLabel,
+  employeeId,
+  anamPreviewEnabled,
 }: {
   displayName: string;
   roleLabel?: string;
+  employeeId: string;
+  anamPreviewEnabled?: boolean;
 }) {
   const [messages, setMessages] = React.useState<InteractionMessage[]>(() => [
     {
@@ -85,8 +90,17 @@ export function EmployeeInteractionPage({
       <div className="flex min-h-0 flex-1 flex-col gap-6 pt-6 lg:flex-row lg:gap-0">
         {/* Character + voice — future: video + duplex audio */}
         <section className="flex shrink-0 flex-col items-center gap-8 lg:w-[42%] lg:max-w-xl lg:justify-center lg:border-r lg:border-neutral-800 lg:pr-8 lg:pt-4">
-          <AvatarStage displayName={displayName} />
-          <VoiceControlButton state={voiceState} onPress={onVoicePress} />
+          {anamPreviewEnabled ? (
+            <AnamAvatarPreview
+              employeeId={employeeId}
+              displayName={displayName}
+            />
+          ) : (
+            <AvatarStage displayName={displayName} />
+          )}
+          {!anamPreviewEnabled && (
+            <VoiceControlButton state={voiceState} onPress={onVoicePress} />
+          )}
         </section>
 
         <Separator className="bg-neutral-800 lg:hidden" />

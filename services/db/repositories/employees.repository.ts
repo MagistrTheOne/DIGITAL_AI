@@ -20,11 +20,16 @@ export type EmployeeRecord = {
   capabilities: string[];
 };
 
-type EmployeeConfigJson = {
+export type EmployeeConfigJson = {
   prompt?: string;
   capabilities?: string[];
   avatarPlaceholder?: string | null;
   videoPreviewUrl?: string | null;
+  /** Anam persona (optional; see docs/anam-avatar-pipeline.md). */
+  anamAvatarId?: string;
+  anamEnvironmentId?: string;
+  anamVoiceId?: string;
+  anamLlmId?: string;
 };
 
 function mapRow(r: typeof employee.$inferSelect): EmployeeRecord {
@@ -96,6 +101,27 @@ export async function getEmployeeById(
       .limit(1);
 
     return row ? mapRow(row) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Full row for BFF (e.g. Anam session: prompt + config). */
+export async function getEmployeeRowById(
+  employeeId: EmployeeId,
+  userId?: string,
+): Promise<typeof employee.$inferSelect | null> {
+  try {
+    const conditions = [eq(employee.id, employeeId)];
+    if (userId) conditions.push(eq(employee.userId, userId));
+
+    const [row] = await db
+      .select()
+      .from(employee)
+      .where(and(...conditions))
+      .limit(1);
+
+    return row ?? null;
   } catch {
     return null;
   }
