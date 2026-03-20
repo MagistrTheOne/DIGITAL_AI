@@ -14,6 +14,7 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/app/SidebarNav";
+import { UserAccountButton } from "@/components/app/UserAccountButton";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -36,13 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SidebarNav />
           </SidebarContent>
           <SidebarFooter className="px-2 pb-3">
-            <div className="rounded-lg border border-neutral-800 bg-neutral-950/80 p-2">
-              <div className="text-xs text-neutral-500">Plan</div>
-              <div className="text-sm font-medium text-neutral-200">Free</div>
-              <div className="mt-1 text-[11px] text-neutral-500">
-                Usage placeholder
-              </div>
-            </div>
+            <UserAccountButton />
           </SidebarFooter>
         </Sidebar>
 
