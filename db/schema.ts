@@ -1,5 +1,11 @@
-import { defineConfig } from "drizzle-kit";
-export default defineConfig({
-  dialect: 'postgresql', // 'mysql' | 'sqlite' | 'turso'
-  schema: './src/db/schema.ts'
-})
+import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+
+export const users = pgTable("users", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  image: text("image"),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
