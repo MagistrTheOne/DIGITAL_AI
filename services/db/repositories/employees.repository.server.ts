@@ -39,14 +39,14 @@ export async function listEmployeesByQuery(
       },
       {
         id: "omar-vantage",
-        name: "Omar vantage",
+        name: "Omar Vantage",
         role_category: "Operations",
         verified: true,
         video_preview_url: "/sample/omar.mp4",
       },
       {
         id: "talia-vantage",
-        name: "Talia vantage",
+        name: "Talia Vantage",
         role_category: "Product",
         verified: true,
         video_preview_url: "/sample/talia.mp4",
