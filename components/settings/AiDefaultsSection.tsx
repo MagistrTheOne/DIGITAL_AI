@@ -4,14 +4,15 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { useSettingsDto } from "@/components/settings/settings-context";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,12 +23,41 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { updateAiDefaults } from "@/features/settings/mutations.server";
+import { cn } from "@/lib/utils";
+
+function SettingRow({
+  label,
+  description,
+  control,
+  className,
+}: {
+  label: string;
+  description?: string;
+  control: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-10 items-center justify-between gap-4 py-3",
+        className,
+      )}
+    >
+      <div className="min-w-0 flex-1 pr-2">
+        <div className="text-sm font-medium text-neutral-200">{label}</div>
+        {description ? (
+          <p className="mt-0.5 text-xs text-neutral-500">{description}</p>
+        ) : null}
+      </div>
+      <div className="w-full max-w-[280px] shrink-0">{control}</div>
+    </div>
+  );
+}
 
 export function AiDefaultsSection() {
   const router = useRouter();
   const dto = useSettingsDto();
   const [pending, startTransition] = React.useTransition();
-  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [tone, setTone] = React.useState(dto.aiDefaults.tone);
   const [language, setLanguage] = React.useState(dto.aiDefaults.language);
@@ -48,48 +78,53 @@ export function AiDefaultsSection() {
     dto.aiDefaults.latencyVsQuality,
   ]);
 
-  React.useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
+  const dirty = React.useMemo(() => {
+    const l = latencyQuality[0] ?? 0;
+    return (
+      tone !== dto.aiDefaults.tone ||
+      language !== dto.aiDefaults.language ||
+      voiceEnabled !== dto.aiDefaults.voiceEnabled ||
+      l !== dto.aiDefaults.latencyVsQuality
+    );
+  }, [dto.aiDefaults, tone, language, voiceEnabled, latencyQuality]);
 
-  const refresh = React.useCallback(() => {
-    router.refresh();
-  }, [router]);
-
-  const persist = React.useCallback(
-    (patch: Parameters<typeof updateAiDefaults>[0]) => {
-      startTransition(async () => {
-        const r = await updateAiDefaults(patch);
-        if (r.ok) refresh();
+  const save = React.useCallback(() => {
+    const l = latencyQuality[0];
+    if (l === undefined) return;
+    startTransition(async () => {
+      const r = await updateAiDefaults({
+        tone,
+        language,
+        voiceEnabled,
+        latencyVsQuality: l,
       });
-    },
-    [refresh],
-  );
+      if (r.ok) router.refresh();
+    });
+  }, [tone, language, voiceEnabled, latencyQuality, router]);
 
   return (
     <Card className="border-neutral-800 bg-neutral-950/50 shadow-none ring-0">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-lg text-neutral-100">AI defaults</CardTitle>
-        <CardDescription className="text-neutral-500">
-          Baseline behavior for new employees and sessions — stored for your workspace.
+      <CardHeader className="space-y-1 px-6 pb-2 pt-6">
+        <CardTitle className="text-base font-semibold text-neutral-100">
+          AI defaults
+        </CardTitle>
+        <CardDescription className="text-xs text-neutral-500">
+          Workspace defaults for tone, language, voice, and inference bias.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-8">
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label className="text-neutral-300">Tone</Label>
+
+      <CardContent className="divide-y divide-neutral-800 px-6 pb-0 pt-0">
+        <SettingRow
+          label="Tone"
+          description="Default response style"
+          control={
             <Select
               value={tone}
-              onValueChange={(v) => {
-                setTone(v);
-                persist({ tone: v });
-              }}
+              onValueChange={setTone}
               disabled={pending}
             >
               <SelectTrigger className="w-full border-neutral-800 bg-neutral-900/80 text-neutral-100">
-                <SelectValue placeholder="Tone" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent className="border-neutral-800 bg-neutral-950 text-neutral-100">
                 <SelectItem value="formal">Formal</SelectItem>
@@ -97,19 +132,20 @@ export function AiDefaultsSection() {
                 <SelectItem value="aggressive">Aggressive</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-neutral-300">Language</Label>
+          }
+        />
+
+        <SettingRow
+          label="Language"
+          description="Primary output language"
+          control={
             <Select
               value={language}
-              onValueChange={(v) => {
-                setLanguage(v);
-                persist({ language: v });
-              }}
+              onValueChange={setLanguage}
               disabled={pending}
             >
               <SelectTrigger className="w-full border-neutral-800 bg-neutral-900/80 text-neutral-100">
-                <SelectValue placeholder="Language" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent className="border-neutral-800 bg-neutral-950 text-neutral-100">
                 <SelectItem value="en">English</SelectItem>
@@ -118,65 +154,57 @@ export function AiDefaultsSection() {
                 <SelectItem value="ja">Japanese</SelectItem>
               </SelectContent>
             </Select>
+          }
+        />
+
+        <div className="flex min-h-10 items-center justify-between gap-4 py-3">
+          <span className="text-sm font-medium text-neutral-200">Voice</span>
+          <div className="flex w-full max-w-[280px] shrink-0 justify-end">
+            <Switch
+              id="voice-enabled"
+              checked={voiceEnabled}
+              disabled={pending}
+              onCheckedChange={setVoiceEnabled}
+              className="data-checked:bg-emerald-600"
+            />
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-neutral-800 bg-neutral-900/30 px-4 py-3">
-          <div className="space-y-0.5">
-            <Label htmlFor="voice-enabled" className="text-neutral-200">
-              Voice enabled
-            </Label>
-            <p className="text-xs text-neutral-600">
-              Allow speech I/O for compatible employees.
-            </p>
+        <div className="flex min-h-10 flex-wrap items-center gap-3 py-3 sm:flex-nowrap">
+          <div className="min-w-18 shrink-0">
+            <span className="text-sm font-medium text-neutral-200">Latency</span>
+            <p className="text-xs text-neutral-500">vs quality</p>
           </div>
-          <Switch
-            id="voice-enabled"
-            checked={voiceEnabled}
-            disabled={pending}
-            onCheckedChange={(v) => {
-              setVoiceEnabled(v);
-              persist({ voiceEnabled: v });
-            }}
-            className="data-checked:bg-emerald-600"
-          />
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <Label className="text-neutral-300">Latency vs quality</Label>
-              <p className="mt-1 text-xs text-neutral-600">
-                Trade faster responses for deeper reasoning when needed.
-              </p>
-            </div>
-            <span className="text-xs tabular-nums text-neutral-500">
-              {latencyQuality[0]}%
-            </span>
-          </div>
-          <div className="flex items-center gap-3 px-1">
-            <span className="w-14 shrink-0 text-xs text-neutral-500">Latency</span>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <Slider
               value={latencyQuality}
               disabled={pending}
-              onValueChange={(v) => {
-                setLatencyQuality(v);
-                if (debounceRef.current) clearTimeout(debounceRef.current);
-                debounceRef.current = setTimeout(() => {
-                  const n = v[0];
-                  if (n !== undefined) persist({ latencyVsQuality: n });
-                }, 450);
-              }}
+              onValueChange={setLatencyQuality}
               max={100}
               step={1}
               className="flex-1 **:data-[slot=slider-range]:bg-neutral-400"
             />
-            <span className="w-14 shrink-0 text-right text-xs text-neutral-500">
-              Quality
+            <span className="w-10 shrink-0 text-right text-xs tabular-nums text-neutral-400">
+              {latencyQuality[0]}%
             </span>
           </div>
         </div>
       </CardContent>
+
+      <CardFooter className="flex flex-col items-stretch gap-2 border-t border-neutral-800 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-neutral-600">
+          {dirty ? "Unsaved changes" : "All changes saved"}
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          disabled={!dirty || pending}
+          onClick={save}
+          className="shrink-0 bg-neutral-200 text-neutral-950 hover:bg-neutral-300 sm:min-w-32"
+        >
+          {pending ? "Saving…" : "Save changes"}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
