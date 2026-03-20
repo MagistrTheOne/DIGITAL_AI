@@ -28,3 +28,6 @@ export function AppHeader({
   );
 }
 
+// Allow both `import { AppHeader }` and `import AppHeader` to avoid RSC import mismatches.
+export default AppHeader;
+
