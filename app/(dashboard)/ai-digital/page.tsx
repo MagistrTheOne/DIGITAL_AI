@@ -18,12 +18,13 @@ const ROLE_FILTERS: Array<"All" | EmployeeRoleCategory> = [
 export default async function AiDigitalPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const qRaw = searchParams.q;
+  const resolvedSearchParams = await searchParams;
+  const qRaw = resolvedSearchParams.q;
   const q = Array.isArray(qRaw) ? qRaw[0] : qRaw;
 
-  const roleRaw = searchParams.role;
+  const roleRaw = resolvedSearchParams.role;
   const role = (Array.isArray(roleRaw) ? roleRaw[0] : roleRaw) ?? "All";
 
   const normalizedRole: EmployeeListQuery["role"] =

@@ -1,2 +1,4 @@
-export { authClient } from "@/lib/auth/auth-client";
+import { authClient } from "@/lib/auth/auth-client";
+
+export { authClient };
 

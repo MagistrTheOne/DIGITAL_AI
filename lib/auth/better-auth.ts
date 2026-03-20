@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { emailOTP } from "better-auth/plugins/email-otp";
+import { dash } from "@better-auth/infra";
 
 // NOTE: This is intentionally a scaffolding-safe setup so the app boots
 // without requiring auth tables/migrations yet. For production, swap the
@@ -13,6 +14,9 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || "dev-secret",
   baseURL: process.env.BETTER_AUTH_URL,
   plugins: [
+    dash({
+      apiKey: process.env.BETTER_AUTH_API_KEY,
+    }),
     emailOTP({
       // Dev-friendly OTP sender. Replace with a real email provider.
       sendVerificationOTP: async ({ email, otp }) => {
