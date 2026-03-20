@@ -1,5 +1,9 @@
 import Link from "next/link";
 
+import {
+  isMiraCatalogPreviewName,
+  MiraLoopPreview,
+} from "@/components/media/MiraLoopPreview";
 import type { EmployeeDTO } from "@/features/employees/types";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
   const name = employee.name;
+  const miraPreview = isMiraCatalogPreviewName(name);
 
   return (
     <Link href={`/employees/${employee.id}`} className="block outline-none">
@@ -23,10 +28,21 @@ export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
           "hover:border-neutral-600",
         )}
       >
-        <div className="aspect-video w-full border-b border-neutral-800 bg-neutral-900">
-          <div className="flex size-full items-center justify-center text-xs text-neutral-500">
-            Preview
-          </div>
+        <div
+          className={cn(
+            "w-full overflow-hidden border-b border-neutral-800 bg-neutral-950",
+            miraPreview
+              ? "aspect-3/4 min-h-48 sm:min-h-56"
+              : "aspect-video bg-neutral-900",
+          )}
+        >
+          {miraPreview ? (
+            <MiraLoopPreview variant="embedded" />
+          ) : (
+            <div className="flex size-full items-center justify-center text-xs text-neutral-500">
+              Preview
+            </div>
+          )}
         </div>
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-3">

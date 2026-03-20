@@ -12,6 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import type { EmployeeRoleCategory } from "@/features/employees/types";
 import { cn } from "@/lib/utils";
 
+import { MiraLoopPreview } from "@/components/media/MiraLoopPreview";
+
 function displayName(raw: string) {
   const t = raw.trim();
   if (!t) return "Agent Vantage";
@@ -42,6 +44,7 @@ export function PreviewPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <MiraLoopPreview />
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-neutral-200">{dn}</span>
           {role ? (
