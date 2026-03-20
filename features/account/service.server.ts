@@ -1,27 +1,21 @@
 import { getCurrentSession } from "@/lib/auth/session.server";
+import { formatTokens } from "@/lib/utils/format";
 import { getPlanForUser } from "@/services/db/repositories/billing.repository";
 import { getUsageForUser } from "@/services/db/repositories/usage.repository";
 
 import type { AccountDashboardDTO } from "@/features/account/types";
 
-function formatCompactNumber(n: number): string {
-  if (n >= 1_000_000) {
-    const v = n / 1_000_000;
-    return `${v % 1 === 0 ? v : v.toFixed(1)}M`;
-  }
-  if (n >= 1_000) {
-    const v = n / 1_000;
-    return `${v % 1 === 0 ? v : v.toFixed(1)}k`;
-  }
+function formatSessionLimit(n: number): string {
+  if (n === -1) return "∞";
   return String(n);
 }
 
 function formatSessionsLine(used: number, limit: number): string {
-  return `${used} / ${limit}`;
+  return `${used} / ${formatSessionLimit(limit)}`;
 }
 
 function formatTokensLine(used: number, limit: number): string {
-  return `${formatCompactNumber(used)} / ${formatCompactNumber(limit)}`;
+  return `${formatTokens(used)} / ${formatTokens(limit)}`;
 }
 
 export async function getAccountDashboardDTO(): Promise<AccountDashboardDTO | null> {
@@ -31,7 +25,7 @@ export async function getAccountDashboardDTO(): Promise<AccountDashboardDTO | nu
 
   const userId = user.id;
 
-  const [billing, usage] = await Promise.all([
+  const [planConfig, usage] = await Promise.all([
     getPlanForUser(userId),
     getUsageForUser(userId),
   ]);
@@ -45,10 +39,13 @@ export async function getAccountDashboardDTO(): Promise<AccountDashboardDTO | nu
     name,
     email: typeof user.email === "string" ? user.email : "",
     image: user.image ?? null,
-    plan: billing.planName,
+    plan: planConfig.label,
     usage: {
-      sessions: formatSessionsLine(usage.sessionsUsed, usage.sessionsLimit),
-      tokens: formatTokensLine(usage.tokensUsed, usage.tokensLimit),
+      sessions: formatSessionsLine(
+        usage.sessionsUsed,
+        planConfig.limits.sessions,
+      ),
+      tokens: formatTokensLine(usage.tokensUsed, planConfig.limits.tokens),
     },
   };
 }
