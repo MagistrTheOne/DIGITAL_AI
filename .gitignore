@@ -20,6 +20,9 @@
 # production
 /build
 
+# local dev avatar uploads (no Blob token)
+/public/avatars/
+
 # misc
 .DS_Store
 *.pem
