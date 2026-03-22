@@ -26,6 +26,8 @@ export type EmployeeConfigJson = {
   avatarPlaceholder?: string | null;
   videoPreviewUrl?: string | null;
   /** Anam persona (optional; see docs/anam-avatar-pipeline.md). */
+  /** Готовая персона из Lab — приоритет над inline avatar/voice/llm для session-token. */
+  anamPersonaId?: string;
   anamAvatarId?: string;
   anamEnvironmentId?: string;
   anamVoiceId?: string;

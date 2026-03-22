@@ -13,6 +13,7 @@ import type {
 } from "@/components/employee-interaction/types";
 import { VoiceControlButton } from "@/components/employee-interaction/VoiceControlButton";
 import { Separator } from "@/components/ui/separator";
+import { runArachneXChatTurn } from "@/features/arachne-x/chatTurn";
 
 function newId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -37,12 +38,18 @@ export function EmployeeInteractionPage({
       id: newId(),
       role: "assistant",
       content:
-        "I'm your digital employee — chat and voice will stream here once the runtime is connected. For now this is a local preview.",
+        "This transcript is a live record of your conversation with the AI employee. The AI will respond based on the context provided.",
       createdAt: Date.now(),
     },
   ]);
   const [draft, setDraft] = React.useState("");
   const [voiceState, setVoiceState] = React.useState<VoiceUiState>("idle");
+  const [transcriptBusy, setTranscriptBusy] = React.useState(false);
+  const messagesRef = React.useRef(messages);
+
+  React.useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const processingTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -54,15 +61,56 @@ export function EmployeeInteractionPage({
     };
   }, []);
 
-  const sendMessage = React.useCallback(() => {
+  const sendMessage = React.useCallback(async () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || transcriptBusy) return;
     setDraft("");
-    setMessages((prev) => [
-      ...prev,
-      { id: newId(), role: "user", content: text, createdAt: Date.now() },
-    ]);
-  }, [draft]);
+    const userMsg: InteractionMessage = {
+      id: newId(),
+      role: "user",
+      content: text,
+      createdAt: Date.now(),
+    };
+    const prior = messagesRef.current;
+    const transcript = prior.map(({ role, content }) => ({ role, content }));
+
+    setMessages((prev) => [...prev, userMsg]);
+    setTranscriptBusy(true);
+
+    try {
+      const result = await runArachneXChatTurn({
+        employeeId,
+        displayName,
+        userMessage: text,
+        transcript,
+      });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: newId(),
+          role: "assistant",
+          content: result.content,
+          thinking: result.thinking,
+          createdAt: Date.now(),
+          status: "complete",
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: newId(),
+          role: "assistant",
+          content:
+            "Couldn't reach the orchestrator (stub). Check the network or ARACHNE-X route when wired.",
+          createdAt: Date.now(),
+          status: "complete",
+        },
+      ]);
+    } finally {
+      setTranscriptBusy(false);
+    }
+  }, [draft, displayName, employeeId, transcriptBusy]);
 
   const onVoicePress = React.useCallback(() => {
     if (voiceState === "idle") {
@@ -109,14 +157,19 @@ export function EmployeeInteractionPage({
         <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-neutral-800/80 bg-neutral-950/40 lg:border-0 lg:bg-transparent">
           <div className="border-b border-neutral-800 px-3 py-2 lg:border-neutral-800">
             <h2 className="text-xs font-medium uppercase tracking-wider text-neutral-500">
-              Session
+              Transcript
             </h2>
             <p className="text-[11px] text-neutral-600">
-              Prepared for WebSocket + SSE streaming
+              ARACHNE-X orchestrator (stub) · thinking trace + reply · SSE/WebSocket later
             </p>
           </div>
-          <ChatMessages messages={messages} />
-          <ChatInput value={draft} onChange={setDraft} onSend={sendMessage} />
+          <ChatMessages messages={messages} busy={transcriptBusy} />
+          <ChatInput
+            value={draft}
+            onChange={setDraft}
+            onSend={() => void sendMessage()}
+            disabled={transcriptBusy}
+          />
         </section>
       </div>
     </div>

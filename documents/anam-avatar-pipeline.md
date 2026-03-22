@@ -122,11 +122,11 @@ flowchart LR
 
 - **BFF:** `POST /api/anam/session` — [Create session token](https://anam.ai/docs/api-reference/create-session-token), ключ только на сервере (`ANAM_API_KEY`).
 - **Клиент:** `@anam-ai/js-sdk` → `createClient(sessionToken)` → `streamToVideoElement` на странице сотрудника `/employees/[employeeId]`, если включён превью.
-- **Включение UI превью:** в env заданы **`ANAM_AVATAR_ID`**, **`ANAM_VOICE_ID`**, **`ANAM_LLM_ID`** (или в `employee.config` overrides), либо слот `emp_841e5c78cab04a01` + дефолтный avatar в коде. **`ANAM_API_KEY`** нужен только для выдачи session token в `/api/anam/session`, но блок видео показывается и без ключа (будет ошибка до настройки ключа). Шаблон: `env.anam.example`. См. [Lab](https://anam.ai/docs/api-key), [list voices](https://anam.ai/docs/api-reference/list-voices), [list llms](https://anam.ai/docs/api-reference/list-llms).
+- **Включение UI превью:** достаточно **`ANAM_PERSONA_ID`** (готовая персона из Lab → в теле session-token передаётся `personaConfig: { personaId }`; голос/аватар/LLM уже в персоне). Иначе — тройка **`ANAM_AVATAR_ID`** + **`ANAM_VOICE_ID`** + **`ANAM_LLM_ID`** (или `employee.config`). Для слота `emp_841e5c78cab04a01` без env зашиты дефолты: persona `deac7256-b641-40e0-9939-5da33a5f5817`, avatar `2e5bacac-6888-4c76-bcf5-266fd42b9444`. **`ANAM_API_KEY`** обязателен для токена. Шаблон: `env.anam.example`. См. [Create session token](https://anam.ai/docs/api-reference/create-session-token).
 - **Опционально:** `ANAM_SESSION_SEND_ENVIRONMENT=1` — добавить в JSON тело `environmentId` (для теста по умолчанию резолвится `41648ba8-b8b9-4e8f-a79c-982c6234fef7` из `employee.config.anamEnvironmentId` или `ANAM_ENVIRONMENT_ID`). В публичном OpenAPI поле не описано — при 400 от API отключите флаг.
 - **Сеть:** если в логах `ECONNRESET` / TLS к `api.anam.ai` — VPN, прокси, фаервол или нестабильный канал; попробуйте другую сеть. Таймаут запроса к Anam: `ANAM_SESSION_FETCH_TIMEOUT_MS` (по умолчанию 25000).
 - **Аудио (UI):** под превью — панель **Audio**: микрофон в Anam (`enumerateDevices` + `changeAudioInputDevice`), mute входа (`muteInputAudio` / `unmuteInputAudio`), громкость речи на `<video>`, выбор выхода через `setSinkId` (Chrome/Edge; иначе системный выход). Настройки микрофона/громкости/выхода кэшируются в `localStorage` (`dai_saas.anam.*`).
-- **Переопределение:** поля в `employee.config`: `anamAvatarId`, `anamVoiceId`, `anamLlmId`, `anamEnvironmentId` (см. `EmployeeConfigJson` в `employees.repository.ts`).
+- **Переопределение:** поля в `employee.config`: **`anamPersonaId`** (приоритет над inline), `anamAvatarId`, `anamVoiceId`, `anamLlmId`, `anamEnvironmentId` (см. `EmployeeConfigJson` в `employees.repository.ts`).
 
 ---
 

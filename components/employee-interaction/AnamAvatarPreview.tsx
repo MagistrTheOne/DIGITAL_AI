@@ -175,7 +175,7 @@ export function AnamAvatarPreview({ employeeId, displayName }: Props) {
         )}
       </div>
       <p className="text-center text-[11px] text-neutral-500">
-        {displayName} — Anam live preview{" "}
+        {displayName} —  live preview{" "}
         {status === "live" ? "(streaming)" : ""}
         {status === "stopped" ? "(stopped)" : ""}
       </p>
