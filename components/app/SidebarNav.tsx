@@ -9,6 +9,7 @@ import {
   Settings,
   Gem,
   Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 
 import {
@@ -18,19 +19,40 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const NAV_ITEMS: Array<{ href: string; label: string; icon: React.ReactNode }> = [
-  { href: "/ai-digital", label: "AI Digital", icon: <Sparkles className="size-4" /> },
-  { href: "/analytics", label: "Analytics", icon: <LineChart className="size-4" /> },
-  {
-    href: "/create-employee",
-    label: "Create Employee",
-    icon: <UserPlus className="size-4" />,
-  },
-  { href: "/settings", label: "Settings", icon: <Settings className="size-4" /> },
-  { href: "/premium", label: "Premium", icon: <Gem className="size-4" /> },
+type NavItem = { href: string; label: string; Icon: LucideIcon };
+
+const NAV_ITEMS: NavItem[] = [
+  { href: "/ai-digital", label: "AI Digital", Icon: Sparkles },
+  { href: "/analytics", label: "Analytics", Icon: LineChart },
+  { href: "/create-employee", label: "Create Employee", Icon: UserPlus },
+  { href: "/settings", label: "Settings", Icon: Settings },
+  { href: "/premium", label: "Premium", Icon: Gem },
 ];
 
-export function SidebarNav() {
+function NavLinkItem({ item, isActive }: { item: NavItem; isActive: boolean }) {
+  const { Icon } = item;
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        tooltip={item.label}
+        className="text-neutral-300"
+      >
+        <Link href={item.href} className="flex w-full items-center gap-2">
+          <span className="text-neutral-500" aria-hidden>
+            <Icon className="size-4 shrink-0" />
+          </span>
+          <span className="truncate">{item.label}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+const NavLinkItemMemo = React.memo(NavLinkItem);
+
+export const SidebarNav = React.memo(function SidebarNav() {
   const pathname = usePathname();
 
   return (
@@ -42,23 +64,10 @@ export function SidebarNav() {
             (item.href !== "/" && pathname.startsWith(item.href + "/"));
 
           return (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={isActive}
-                className="justify-start text-neutral-300"
-              >
-                <Link href={item.href} className="flex w-full items-center gap-2">
-                  <span className="text-neutral-500">{item.icon}</span>
-                  <span className="truncate">{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <NavLinkItemMemo key={item.href} item={item} isActive={isActive} />
           );
         })}
       </SidebarMenu>
-
-
     </SidebarGroup>
   );
-}
+});

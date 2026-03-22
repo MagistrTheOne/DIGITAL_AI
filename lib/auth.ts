@@ -25,12 +25,12 @@ const apiKey = process.env.BETTER_AUTH_API_KEY?.trim();
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
 
-if (process.env.NODE_ENV === "development" && !apiKey) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    "[Better Auth] BETTER_AUTH_API_KEY is missing — Dash / dashboard checks may fail.",
-  );
-}
+// if (process.env.NODE_ENV === "development" && !apiKey) {
+//   // eslint-disable-next-line no-console
+//   console.warn(
+//     "[Better Auth] BETTER_AUTH_API_KEY is missing — Dash / dashboard checks may fail.",
+//   );
+// }
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {

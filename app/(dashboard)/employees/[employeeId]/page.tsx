@@ -72,7 +72,8 @@ export default async function EmployeeDetailPage({
   const row = userId ? await getEmployeeRowById(employeeId, userId) : null;
   const cfg = (row?.config ?? {}) as EmployeeConfigJson;
   const anamPreviewEnabled =
-    Boolean(userId) && isAnamPreviewEnabledForEmployee(employeeId, cfg);
+    Boolean(userId) &&
+    isAnamPreviewEnabledForEmployee(employeeId, employee.name, cfg);
 
   return (
     <div className="flex flex-col gap-6 p-6">

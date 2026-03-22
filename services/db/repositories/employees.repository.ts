@@ -25,10 +25,12 @@ export type EmployeeConfigJson = {
   capabilities?: string[];
   avatarPlaceholder?: string | null;
   videoPreviewUrl?: string | null;
-  /** Anam persona (optional; see docs/anam-avatar-pipeline.md). */
-  /** Готовая персона из Lab — приоритет над inline avatar/voice/llm для session-token. */
+  /** Anam Lab persona id (session-token oneOf `personaId`). */
   anamPersonaId?: string;
+  /** Legacy custom personaConfig (avatar + voice + llm) if persona id not used. */
   anamAvatarId?: string;
+  /** Overrides `prompt` for Anam `systemPrompt` only (optional). */
+  anamSystemPrompt?: string;
   anamEnvironmentId?: string;
   anamVoiceId?: string;
   anamLlmId?: string;

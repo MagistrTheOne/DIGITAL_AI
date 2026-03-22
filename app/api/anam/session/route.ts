@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 
 import { getCurrentSession } from "@/lib/auth/session.server";
 import {
-  resolveAnamLabPersonaId,
-  resolveAnamPersonaIds,
+  resolveAnamCustomPersonaIds,
+  resolveAnamPersonaId,
+  resolveAnamSystemPromptForSession,
 } from "@/features/employees/anam.server";
 import {
   getEmployeeRowById,
@@ -74,48 +75,42 @@ export async function POST(req: Request) {
   }
 
   const cfg = (row.config ?? {}) as EmployeeConfigJson;
-  const labPersonaId = resolveAnamLabPersonaId(employeeId, cfg);
-  const { avatarId, voiceId, llmId, environmentId } = resolveAnamPersonaIds(
-    employeeId,
-    cfg,
-  );
+  const displayName = row.name;
+  const personaId = resolveAnamPersonaId(employeeId, displayName, cfg);
+  const custom = resolveAnamCustomPersonaIds(employeeId, displayName, cfg);
+  const { avatarId, voiceId, llmId, environmentId } = custom;
 
-  const displayName = row.name.replace(/\s+Vantage$/i, "").trim() || "Assistant";
-  const systemPrompt =
-    typeof cfg.prompt === "string" && cfg.prompt.trim()
-      ? cfg.prompt
-      : "You are a helpful assistant.";
+  const payload: Record<string, unknown> = {
+    clientLabel: `dai_saas:${employeeId}`,
+  };
 
-  let personaConfig: Record<string, unknown>;
-
-  if (labPersonaId) {
-    // Готовая персона из Lab (avatar/voice/llm уже привязаны к персоне).
-    personaConfig = { personaId: labPersonaId };
-  } else {
-    if (!avatarId || !voiceId || !llmId) {
-      return NextResponse.json(
-        {
-          error:
-            "Missing Anam setup: set ANAM_PERSONA_ID (Lab persona) or ANAM_AVATAR_ID + ANAM_VOICE_ID + ANAM_LLM_ID.",
-        },
-        { status: 400 },
-      );
-    }
-    personaConfig = {
-      name: displayName.slice(0, 64),
+  if (personaId) {
+    payload.personaConfig = { personaId };
+  } else if (avatarId && voiceId && llmId) {
+    const shortName =
+      row.name.replace(/\s+Vantage$/i, "").trim() || "Assistant";
+    const systemPrompt = resolveAnamSystemPromptForSession(
+      employeeId,
+      displayName,
+      cfg,
+    );
+    payload.personaConfig = {
+      name: shortName.slice(0, 64),
       avatarId,
       voiceId,
       llmId,
       systemPrompt,
     };
+  } else {
+    return NextResponse.json(
+      {
+        error:
+          "Missing Anam persona. Set ANAM_PERSONA_ID (Lab persona id), or ANAM_AVATAR_ID + ANAM_VOICE_ID + ANAM_LLM_ID / employee.config.",
+      },
+      { status: 400 },
+    );
   }
 
-  const payload: Record<string, unknown> = {
-    clientLabel: `dai_saas:${employeeId}`,
-    personaConfig,
-  };
-
-  // OpenAPI for session-token does not document environmentId; enable explicitly if your Lab expects it.
   if (
     environmentId &&
     process.env.ANAM_SESSION_SEND_ENVIRONMENT === "1"
