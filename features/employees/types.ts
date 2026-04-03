@@ -41,7 +41,13 @@ export type CreateEmployeeInput = {
   capabilities: string[];
 };
 
+/** ARACHNE-X realtime mint result surfaced to the client. */
+export type EmployeeRealtimeBootstrap =
+  | { ok: true; issuedAt: string; expiresAt: string }
+  | { ok: false; error: string };
+
 export type EmployeeSessionBootstrapDTO = {
+  /** UI session id (mint body); new UUID per page load. */
   sessionId: string;
   employee: EmployeeDTO;
   websocket: {
@@ -49,5 +55,6 @@ export type EmployeeSessionBootstrapDTO = {
     token: string;
   };
   capabilities: EmployeeCapability[];
+  realtime: EmployeeRealtimeBootstrap;
 };
 

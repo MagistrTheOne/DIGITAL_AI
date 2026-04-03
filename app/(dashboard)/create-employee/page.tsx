@@ -2,7 +2,7 @@ import { CreateEmployeePage } from "@/components/create-employee/CreateEmployeeP
 
 export default function CreateEmployeeRoutePage() {
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 p-4 md:p-5">
       <CreateEmployeePage />
     </div>
   );

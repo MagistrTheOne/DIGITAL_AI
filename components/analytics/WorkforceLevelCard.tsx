@@ -1,5 +1,6 @@
 "use client";
 
+import { analyticsCardClassName } from "@/components/analytics/analyticsSurface";
 import {
   Card,
   CardContent,
@@ -12,20 +13,21 @@ import { Badge } from "@/components/ui/badge";
 import type { AnalyticsDashboardDTO } from "@/features/analytics/types";
 import { cn } from "@/lib/utils";
 
-const cardSurface = "border-neutral-800 bg-neutral-950/50 text-neutral-200 shadow-none ring-0";
-
 export function WorkforceLevelCard({
   workforce,
 }: {
   workforce: AnalyticsDashboardDTO["workforceLevel"];
 }) {
   return (
-    <Card size="sm" className={cn(cardSurface, "border-neutral-700/80")}>
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 pb-2">
-        <div className="space-y-1">
-          <CardTitle className="text-base text-neutral-100">AI workforce level</CardTitle>
-          <CardDescription className="text-neutral-500">
-            XP-like progression for your deployed agents.
+    <Card
+      size="sm"
+      className={cn(analyticsCardClassName(), "border-neutral-700/50")}
+    >
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 pb-1.5">
+        <div className="space-y-0.5">
+          <CardTitle className="text-sm text-neutral-100">AI workforce level</CardTitle>
+          <CardDescription className="text-xs text-neutral-500">
+            Progression signal — secondary to usage and reliability.
           </CardDescription>
         </div>
         <Badge
@@ -35,22 +37,22 @@ export function WorkforceLevelCard({
           Level {workforce.level}
         </Badge>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-2.5">
         <div className="flex flex-wrap items-baseline gap-2">
-          <span className="text-lg font-semibold text-neutral-100">{workforce.tierName}</span>
-          <span className="text-xs text-neutral-500">— tier name</span>
+          <span className="text-base font-semibold text-neutral-100">{workforce.tierName}</span>
+          <span className="text-[11px] text-neutral-500">tier</span>
         </div>
-        <div className="space-y-2">
-          <div className="flex justify-between text-xs text-neutral-500">
-            <span>Progress to next level</span>
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-[11px] text-neutral-500">
+            <span>Next level</span>
             <span className="tabular-nums text-neutral-400">{workforce.progressPct}%</span>
           </div>
           <Progress
             value={workforce.progressPct}
-            className="h-2 bg-neutral-800 **:data-[slot=progress-indicator]:bg-violet-500"
+            className="h-1.5 bg-neutral-800 **:data-[slot=progress-indicator]:bg-violet-500"
           />
         </div>
-        <p className="text-sm leading-relaxed text-neutral-400">{workforce.hint}</p>
+        <p className="text-xs leading-snug text-neutral-400">{workforce.hint}</p>
       </CardContent>
     </Card>
   );

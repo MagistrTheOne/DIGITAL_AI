@@ -1,3 +1,4 @@
+import { analyticsCardClassName } from "@/components/analytics/analyticsSurface";
 import {
   Card,
   CardContent,
@@ -6,8 +7,6 @@ import {
 } from "@/components/ui/card";
 import type { AnalyticsDashboardDTO } from "@/features/analytics/types";
 import { cn } from "@/lib/utils";
-
-const cardSurface = "border-neutral-800 bg-neutral-950/50 text-neutral-200 shadow-none ring-0";
 
 function formatCostUsd(n: number): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
@@ -76,23 +75,23 @@ export function MetricsCards({ kpis }: { kpis: AnalyticsDashboardDTO["kpis"] }) 
   const metrics = buildMetrics(kpis);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {metrics.map((m) => (
-        <Card key={m.title} size="sm" className={cn(cardSurface)}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+        <Card key={m.title} size="sm" className={analyticsCardClassName()}>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
               {m.title}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <div className="text-2xl font-semibold tabular-nums tracking-tight text-neutral-100">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <div className="text-xl font-semibold tabular-nums tracking-tight text-neutral-100">
                 {m.value}
               </div>
               <Trend dir={m.trend.dir} text={m.trend.text} />
             </div>
-            <p className="mt-1 text-xs text-neutral-500">{m.description}</p>
-            <p className="mt-2 text-[11px] uppercase tracking-wide text-neutral-600">
+            <p className="mt-0.5 text-[11px] text-neutral-500">{m.description}</p>
+            <p className="mt-1.5 text-[10px] uppercase tracking-wide text-neutral-600">
               {m.period}
             </p>
           </CardContent>

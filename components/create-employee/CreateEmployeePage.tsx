@@ -4,10 +4,11 @@ import { CreateEmployeeWizard } from "@/components/create-employee/CreateEmploye
 
 export function CreateEmployeePage() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <AppHeader
+        compact
         title="Create Employee"
-        subtitle="Onboard a new digital workforce member"
+        subtitle="Role, identity, behavior, then deploy."
       />
       <CreateEmployeeWizard />
     </div>

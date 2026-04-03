@@ -14,6 +14,7 @@ import {
   insertEmployeeRow,
   listEmployeesByQuery,
 } from "@/services/db/repositories/employees.repository";
+import { mintArachneRealtimeToken } from "@/features/arachine-x/server/arachneRealtimeMint.server";
 
 function toRoleCategory(role: string): EmployeeRoleCategory {
   switch (role) {
@@ -99,6 +100,7 @@ export async function getEmployeeForDashboard(
 
 export async function getEmployeeSessionBootstrap(
   employeeId: string,
+  options?: { nullxesSessionId?: string },
 ): Promise<EmployeeSessionBootstrapDTO> {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
@@ -113,14 +115,36 @@ export async function getEmployeeSessionBootstrap(
       capabilities: [],
     };
 
+  const sessionId = crypto.randomUUID();
+  const mint = await mintArachneRealtimeToken({
+    sessionId,
+    employeeId,
+    nullxesSessionId: options?.nullxesSessionId?.trim() || undefined,
+  });
+
+  if (!mint.ok) {
+    return {
+      sessionId,
+      employee,
+      websocket: { url: "", token: "" },
+      capabilities: employee.capabilities,
+      realtime: { ok: false, error: mint.error },
+    };
+  }
+
   return {
-    sessionId: `sess_${employeeId}`,
+    sessionId,
     employee,
     websocket: {
-      url: "/api/arachine-x/ws",
-      token: "dev-token",
+      url: mint.websocketUrl,
+      token: mint.token,
     },
     capabilities: employee.capabilities,
+    realtime: {
+      ok: true,
+      issuedAt: mint.issuedAt,
+      expiresAt: mint.expiresAt,
+    },
   };
 }
 

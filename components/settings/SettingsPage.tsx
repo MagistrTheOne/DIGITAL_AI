@@ -17,13 +17,14 @@ export function SettingsPage({ initialData }: { initialData: SettingsDTO }) {
 
   return (
     <SettingsProvider value={initialData}>
-      <div className="flex min-h-0 flex-1 flex-col gap-8">
+      <div className="flex min-h-0 flex-1 flex-col gap-6">
         <AppHeader
+          compact
           title="Settings"
-          subtitle="Control how your AI workforce runs — identity, billing, defaults, and runtime."
+          subtitle="Identity, billing, defaults, and runtime."
         />
 
-        <div className="flex min-h-[min(70vh,860px)] flex-col gap-8 lg:flex-row lg:gap-10">
+        <div className="flex min-h-[min(70vh,860px)] flex-col gap-6 lg:flex-row lg:gap-6">
           <SettingsSidebar active={section} onSelect={setSection} />
 
           <div className="min-w-0 flex-1 space-y-2">

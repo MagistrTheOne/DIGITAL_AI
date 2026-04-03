@@ -1,5 +1,6 @@
 "use client";
 
+import { analyticsCardClassName } from "@/components/analytics/analyticsSurface";
 import {
   Card,
   CardContent,
@@ -12,8 +13,6 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import type { AnalyticsDashboardDTO } from "@/features/analytics/types";
 import { cn } from "@/lib/utils";
-
-const cardSurface = "border-neutral-800 bg-neutral-950/50 text-neutral-200 shadow-none ring-0";
 
 const LATENCY_MAX_MS = 2000;
 
@@ -58,26 +57,26 @@ export function EmployeePerformanceList({
   employees: AnalyticsDashboardDTO["employees"];
 }) {
   return (
-    <Card size="sm" className={cn(cardSurface)}>
-      <CardHeader>
-        <CardTitle className="text-base text-neutral-100">AI employee performance</CardTitle>
-        <CardDescription className="text-neutral-500">
-          Per-agent throughput, quality, and health.
+    <Card size="sm" className={analyticsCardClassName()}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm text-neutral-100">Per-employee operations</CardTitle>
+        <CardDescription className="text-xs text-neutral-500">
+          Throughput, success rate, and latency by agent.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-0 px-0 pb-2">
+      <CardContent className="space-y-0 px-0 pb-1">
         {employees.length === 0 ? (
-          <p className="px-6 py-6 text-sm text-neutral-500">No employee telemetry yet.</p>
+          <p className="px-4 py-4 text-xs text-neutral-500">No employee telemetry yet.</p>
         ) : (
           employees.map((r, i) => (
             <div key={r.employeeId}>
-              {i > 0 ? <Separator className="bg-neutral-800" /> : null}
-              <div className="grid gap-4 px-6 py-4 sm:grid-cols-[minmax(0,1.1fr)_auto_minmax(0,1fr)_minmax(0,1fr)] sm:items-center">
+              {i > 0 ? <Separator className="bg-neutral-800/80" /> : null}
+              <div className="grid gap-3 px-4 py-2.5 sm:grid-cols-[minmax(0,1.1fr)_auto_minmax(0,1fr)_minmax(0,1fr)] sm:items-center">
                 <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <span className="truncate font-medium text-neutral-200">{r.name}</span>
                   <StatusBadge status={r.status} />
                 </div>
-                <div className="text-sm tabular-nums text-neutral-400 sm:text-right">
+                <div className="text-xs tabular-nums text-neutral-400 sm:text-right">
                   {r.sessions}{" "}
                   <span className="text-neutral-600">sess.</span>
                 </div>

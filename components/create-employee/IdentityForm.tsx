@@ -3,7 +3,6 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/components/ui/card";
 
 function initials(name: string) {
   const p = name.trim().split(/\s+/).filter(Boolean);
@@ -50,23 +49,21 @@ export function IdentityForm({
         </div>
       </div>
 
-      <Card className="border-neutral-800 bg-neutral-950/50 shadow-none ring-0">
-        <CardContent className="space-y-2 pt-6">
-          <Label htmlFor="avatar-ph" className="text-neutral-300">
-            Avatar note (optional)
-          </Label>
-          <Input
-            id="avatar-ph"
-            value={avatarPlaceholder}
-            onChange={(e) => onAvatarPlaceholderChange(e.target.value)}
-            placeholder="e.g. gradient / photo URL later"
-            className="border-neutral-800 bg-neutral-950 text-neutral-200"
-          />
-          <p className="text-xs text-neutral-500">
-            Placeholder only — image upload comes in a later release.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-2 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
+        <Label htmlFor="avatar-ph" className="text-neutral-300">
+          Avatar note (optional)
+        </Label>
+        <Input
+          id="avatar-ph"
+          value={avatarPlaceholder}
+          onChange={(e) => onAvatarPlaceholderChange(e.target.value)}
+          placeholder="e.g. gradient / photo URL later"
+          className="border-neutral-800 bg-neutral-950 text-neutral-200"
+        />
+        <p className="text-xs text-neutral-500">
+          Placeholder only — image upload comes in a later release.
+        </p>
+      </div>
     </div>
   );
 }

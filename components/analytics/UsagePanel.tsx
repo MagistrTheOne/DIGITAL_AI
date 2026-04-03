@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { analyticsCardClassName } from "@/components/analytics/analyticsSurface";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,8 +21,6 @@ import type {
 } from "@/features/analytics/types";
 import { formatTokens } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-
-const cardSurface = "border-neutral-800 bg-neutral-950/50 text-neutral-200 shadow-none ring-0";
 
 function pct(used: number, limit: number): number {
   if (limit <= 0 || limit === -1) return 0;
@@ -80,13 +79,13 @@ export function UsagePanel({
   const tokenLabel = `${formatTokens(usage.tokensUsed)} / ${formatTokens(limits.tokensLimit)}`;
 
   return (
-    <Card size="sm" className={cn(cardSurface)}>
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3">
+    <Card size="sm" className={analyticsCardClassName()}>
+      <CardHeader className="pb-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <CardTitle className="text-base text-neutral-100">Usage pressure</CardTitle>
-            <CardDescription className="text-neutral-500">
-              Consumption vs plan caps — color reflects runway.
+            <CardTitle className="text-sm text-neutral-100">Usage & plan caps</CardTitle>
+            <CardDescription className="text-xs text-neutral-500">
+              Runway vs billing limits — primary for procurement.
             </CardDescription>
           </div>
           <span
@@ -104,7 +103,7 @@ export function UsagePanel({
           </span>
         </div>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-3">
         <div className="space-y-2">
           <div className="flex items-baseline justify-between gap-2 text-xs">
             <span className="text-neutral-500">Sessions</span>
@@ -129,16 +128,16 @@ export function UsagePanel({
         <Separator className="bg-neutral-800" />
 
         <Alert
-          className="border-amber-500/25 bg-amber-500/5 text-amber-100/90 **:data-[slot=alert-description]:text-amber-100/70"
+          className="border-amber-500/25 bg-amber-500/5 py-2 text-amber-100/90 **:data-[slot=alert-description]:text-amber-100/70 **:data-[slot=alert-description]:text-xs"
           variant="default"
         >
-          <AlertTitle className="text-sm">Upgrade to unlock headroom</AlertTitle>
+          <AlertTitle className="text-xs font-medium">Upgrade for headroom</AlertTitle>
           <AlertDescription>
-            Approaching caps — throttle risk increases as you scale.
+            Near caps — throttling risk as you scale.
           </AlertDescription>
         </Alert>
       </CardContent>
-      <CardFooter className="flex flex-col items-stretch gap-2 border-t border-neutral-800 pt-4 sm:flex-row sm:justify-end">
+      <CardFooter className="flex flex-col items-stretch gap-2 border-t border-neutral-800/80 pt-3 sm:flex-row sm:justify-end">
         <Button
           asChild
           variant="secondary"

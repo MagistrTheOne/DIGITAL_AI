@@ -25,7 +25,7 @@ export function RoleSelector({
           <Label
             key={role}
             htmlFor={`role-${role}`}
-            className="flex cursor-pointer items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/50 px-3 py-3 text-sm text-neutral-200 hover:border-neutral-600 has-data-[state=checked]:border-neutral-500 has-data-[state=checked]:bg-neutral-900/80"
+            className="flex cursor-pointer items-center gap-3 rounded-lg border border-neutral-800/80 bg-neutral-900/40 px-3 py-2.5 text-sm text-neutral-200 hover:border-neutral-600 has-data-[state=checked]:border-neutral-500 has-data-[state=checked]:bg-neutral-900/80"
           >
             <RadioGroupItem value={role} id={`role-${role}`} className="border-neutral-600" />
             <span>{role}</span>

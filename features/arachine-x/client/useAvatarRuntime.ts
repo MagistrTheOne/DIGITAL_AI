@@ -3,7 +3,10 @@
 import * as React from "react";
 
 import { WebSocketTransport } from "@/features/arachine-x/transport/WebSocketTransport";
-import type { AvatarSessionBootstrap, AvatarRuntime } from "@/features/arachine-x/client/createAvatarRuntime";
+import type {
+  AvatarRuntime,
+  AvatarSessionBootstrap,
+} from "@/features/arachine-x/client/createAvatarRuntime";
 import { createAvatarRuntime } from "@/features/arachine-x/client/createAvatarRuntime";
 
 export function useAvatarRuntime(bootstrap: AvatarSessionBootstrap) {
@@ -30,12 +33,20 @@ export function useAvatarRuntime(bootstrap: AvatarSessionBootstrap) {
   const sendChat = React.useCallback((text: string) => runtimeRef.current?.sendChat(text), []);
   const setMuted = React.useCallback((muted: boolean) => runtimeRef.current?.setMuted(muted), []);
 
+  const subscribeEvents = React.useCallback(
+    (cb: Parameters<AvatarRuntime["subscribeEvents"]>[0]) => {
+      return runtimeRef.current?.subscribeEvents(cb) ?? (() => {});
+    },
+    [],
+  );
+
   return {
     state: runtimeRef.current!.getState(),
     connect,
     disconnect,
     sendChat,
     setMuted,
+    subscribeEvents,
   };
 }
 

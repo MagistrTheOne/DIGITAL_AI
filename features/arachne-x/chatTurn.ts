@@ -1,6 +1,9 @@
 /**
- * ARACHNE-X — каркас чат-хода.
- * Замените тело на `fetch("/api/arachne-x/chat", …)` + SSE/WebSocket, когда бэкенд готов.
+ * ARACHNE-X — локальная заглушка чат-хода (dev / демо без бэка).
+ *
+ * Для продукта с ARACHNE-X (линия B, MVP): основной канал чата — **WebSocket**
+ * (`chat.send` / `chat.message.received`), см. `EmployeeInteractionPage` + `WebSocketTransport`.
+ * **Не** подключать `POST /v1/chat` из UI, пока продукт явно не запросит второй канал.
  */
 
 export type ArachneChatTurnInput = {

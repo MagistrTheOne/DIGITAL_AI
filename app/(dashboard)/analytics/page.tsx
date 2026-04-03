@@ -17,7 +17,7 @@ export default async function AnalyticsRoutePage() {
   if (!data) redirect("/sign-in");
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 p-4 md:p-5">
       <AnalyticsPage
         data={data}
         usageLimits={{

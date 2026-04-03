@@ -34,11 +34,17 @@ export function AppShell({
             className="border-r border-neutral-800 bg-neutral-950"
           >
             <SidebarHeader className="flex items-center justify-between gap-2 px-3 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
-              <div className="flex min-w-0 items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
+              <div
+                className="flex min-w-0 items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
+                aria-label="NULLXES"
+              >
                 <div
-                  className="size-8 shrink-0 rounded-md border border-neutral-700 bg-neutral-900"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 text-sm font-semibold text-neutral-100"
                   title="NULLXES"
-                />
+                  aria-hidden
+                >
+                  N
+                </div>
                 <div className="min-w-0 truncate text-sm font-semibold leading-none text-neutral-200 group-data-[collapsible=icon]:hidden">
                   NULLXES
                 </div>

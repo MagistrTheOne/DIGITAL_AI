@@ -34,7 +34,7 @@ export function AnamSessionToolbar({
               Microphone
             </span>
             <span className="text-[11px] text-neutral-500">
-              {micOn ? "Sending audio to Anam" : "Muted — avatar won’t hear you"}
+              {micOn ? "Sending audio to avatar" : "Muted — avatar won’t hear you"}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -42,7 +42,7 @@ export function AnamSessionToolbar({
             <Switch
               checked={micOn}
               onCheckedChange={(on) => onMicMutedChange(!on)}
-              aria-label="Toggle microphone to Anam"
+              aria-label="Toggle microphone to avatar"
             />
           </div>
         </div>

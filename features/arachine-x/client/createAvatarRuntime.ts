@@ -26,6 +26,8 @@ export type AvatarRuntime = {
   setMuted(muted: boolean): void;
   getState(): ArachineXRuntimeState;
   subscribe(cb: (state: ArachineXRuntimeState) => void): () => void;
+  /** Raw ARACHNE-X wire events (e.g. append each assistant message to transcript). */
+  subscribeEvents(cb: (event: ArachineXEvent) => void): () => void;
 };
 
 export function createAvatarRuntime({
@@ -55,8 +57,6 @@ export function createAvatarRuntime({
         url: bootstrap.websocket.url,
         token: bootstrap.websocket.token,
       });
-
-      bus.publish({ type: "session.connected", at: Date.now() });
     },
     async disconnect() {
       await transport.disconnect();
@@ -81,6 +81,9 @@ export function createAvatarRuntime({
       // immediate sync
       cb(state);
       return () => stateListeners.delete(cb);
+    },
+    subscribeEvents(cb) {
+      return bus.subscribe(cb);
     },
   };
 }

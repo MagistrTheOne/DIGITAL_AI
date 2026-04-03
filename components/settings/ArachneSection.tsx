@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { useSettingsDto } from "@/components/settings/settings-context";
+import { dashboardGlassCardClassName } from "@/components/shared/dashboardGlassCard";
 import {
   Card,
   CardContent,
@@ -59,15 +60,15 @@ export function ArachneSection() {
   );
 
   return (
-    <Card className="border-neutral-800 bg-neutral-950/50 shadow-none ring-0">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-lg text-neutral-100">Arachne-X</CardTitle>
-        <CardDescription className="text-neutral-500">
+    <Card size="sm" className={dashboardGlassCardClassName()}>
+      <CardHeader className="space-y-0.5 pb-2">
+        <CardTitle className="text-sm text-neutral-100">Arachne-X</CardTitle>
+        <CardDescription className="text-xs text-neutral-500">
           Advanced runtime — streaming, media fidelity, and speech models.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-8">
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-neutral-800 bg-neutral-900/30 px-4 py-3">
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-neutral-800/80 bg-neutral-900/30 px-3 py-2.5">
           <div className="space-y-0.5">
             <Label htmlFor="arachne-stream" className="text-neutral-200">
               Streaming responses
@@ -88,7 +89,7 @@ export function ArachneSection() {
           />
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label className="text-neutral-300">Avatar quality</Label>
             <Select

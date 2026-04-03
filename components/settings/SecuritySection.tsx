@@ -2,6 +2,7 @@
 
 import { KeyRound, MonitorSmartphone } from "lucide-react";
 
+import { dashboardGlassCardClassName } from "@/components/shared/dashboardGlassCard";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,20 +23,20 @@ const PLACEHOLDER_SESSIONS = [
 
 export function SecuritySection() {
   return (
-    <Card className="border-neutral-800 bg-neutral-950/50 shadow-none ring-0">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-lg text-neutral-100">Security</CardTitle>
-        <CardDescription className="text-neutral-500">
+    <Card size="sm" className={dashboardGlassCardClassName()}>
+      <CardHeader className="space-y-0.5 pb-2">
+        <CardTitle className="text-sm text-neutral-100">Security</CardTitle>
+        <CardDescription className="text-xs text-neutral-500">
           Sessions and programmatic access — connect to auth service later.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-8">
+      <CardContent className="space-y-6">
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium text-neutral-300">
             <MonitorSmartphone className="size-4 text-neutral-500" />
             Active sessions
           </div>
-          <ul className="divide-y divide-neutral-800 rounded-lg border border-neutral-800 bg-neutral-900/30">
+          <ul className="divide-y divide-neutral-800/80 rounded-lg border border-neutral-800/80 bg-neutral-900/30">
             {PLACEHOLDER_SESSIONS.map((s) => (
               <li
                 key={s.id}
@@ -58,7 +59,7 @@ export function SecuritySection() {
           </Button>
         </div>
 
-        <Separator className="bg-neutral-800" />
+        <Separator className="bg-neutral-800/80" />
 
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium text-neutral-300">

@@ -13,7 +13,13 @@ export function SettingsSidebar({
   onSelect: (id: SettingsSectionId) => void;
 }) {
   return (
-    <aside className="flex w-full shrink-0 flex-col gap-1 border-b border-neutral-800 pb-6 lg:w-56 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6">
+    <aside
+      className={cn(
+        "flex w-full shrink-0 flex-col gap-1 border-b border-neutral-800 pb-6",
+        "lg:w-56 lg:rounded-xl lg:border lg:border-neutral-800/70 lg:bg-neutral-950/35 lg:pb-3 lg:pl-3 lg:pr-4 lg:pt-3",
+        "lg:backdrop-blur-md lg:backdrop-saturate-150 lg:ring-1 lg:ring-white/5",
+      )}
+    >
       <div className="mb-4 hidden lg:block">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
           Control panel
@@ -30,8 +36,8 @@ export function SettingsSidebar({
               className={cn(
                 "flex min-w-34 flex-col items-start rounded-lg px-3 py-2.5 text-left transition-colors lg:min-w-0",
                 isActive
-                  ? "bg-neutral-900 text-neutral-100 ring-1 ring-neutral-700"
-                  : "text-neutral-400 hover:bg-neutral-900/60 hover:text-neutral-200",
+                  ? "bg-neutral-900/90 text-neutral-100 ring-1 ring-white/10"
+                  : "text-neutral-400 hover:bg-neutral-900/50 hover:text-neutral-200",
               )}
             >
               <span className="text-sm font-medium">{item.label}</span>

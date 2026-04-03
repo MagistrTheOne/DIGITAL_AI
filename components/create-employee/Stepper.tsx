@@ -16,7 +16,7 @@ export function Stepper({
   const pct = Math.round(((currentStep + 1) / totalSteps) * 100);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         {STEP_LABELS.map((label, i) => (
           <Badge

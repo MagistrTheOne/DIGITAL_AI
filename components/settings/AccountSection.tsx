@@ -7,6 +7,7 @@ import { Loader2, Trash2, Upload } from "lucide-react";
 import { useSettingsDto } from "@/components/settings/settings-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { dashboardGlassCardClassName } from "@/components/shared/dashboardGlassCard";
 import {
   Card,
   CardContent,
@@ -99,14 +100,14 @@ export function AccountSection() {
   };
 
   return (
-    <Card className="border-neutral-800 bg-neutral-950/50 shadow-none ring-0">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-lg text-neutral-100">Account</CardTitle>
-        <CardDescription className="text-neutral-500">
+    <Card size="sm" className={dashboardGlassCardClassName()}>
+      <CardHeader className="space-y-0.5 pb-2">
+        <CardTitle className="text-sm text-neutral-100">Account</CardTitle>
+        <CardDescription className="text-xs text-neutral-500">
           Identity used across your AI workforce and billing profile.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-8">
+      <CardContent className="space-y-6">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
           <div className="flex flex-col items-center gap-3 sm:items-start">
             <input

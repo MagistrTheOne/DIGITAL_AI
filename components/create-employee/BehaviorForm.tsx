@@ -45,7 +45,7 @@ export function BehaviorForm({
               <Label
                 key={cap}
                 htmlFor={`cap-${cap}`}
-                className="flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-950/50 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600"
+                className="flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-800/80 bg-neutral-900/40 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600"
               >
                 <Checkbox
                   id={`cap-${cap}`}

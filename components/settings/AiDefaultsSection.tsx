@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { useSettingsDto } from "@/components/settings/settings-context";
+import { dashboardGlassCardClassName } from "@/components/shared/dashboardGlassCard";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -103,9 +104,9 @@ export function AiDefaultsSection() {
   }, [tone, language, voiceEnabled, latencyQuality, router]);
 
   return (
-    <Card className="border-neutral-800 bg-neutral-950/50 shadow-none ring-0">
-      <CardHeader className="space-y-1 px-6 pb-2 pt-6">
-        <CardTitle className="text-base font-semibold text-neutral-100">
+    <Card size="sm" className={dashboardGlassCardClassName()}>
+      <CardHeader className="space-y-0.5 pb-2">
+        <CardTitle className="text-sm font-semibold text-neutral-100">
           AI defaults
         </CardTitle>
         <CardDescription className="text-xs text-neutral-500">
@@ -113,7 +114,7 @@ export function AiDefaultsSection() {
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="divide-y divide-neutral-800 px-6 pb-0 pt-0">
+      <CardContent className="divide-y divide-neutral-800/80 px-4 pb-0 pt-0">
         <SettingRow
           label="Tone"
           description="Default response style"
@@ -191,7 +192,7 @@ export function AiDefaultsSection() {
         </div>
       </CardContent>
 
-      <CardFooter className="flex flex-col items-stretch gap-2 border-t border-neutral-800 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <CardFooter className="flex flex-col items-stretch gap-2 border-t border-neutral-800/80 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-neutral-600">
           {dirty ? "Unsaved changes" : "All changes saved"}
         </p>

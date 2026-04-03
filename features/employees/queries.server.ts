@@ -5,7 +5,10 @@ export async function getEmployeesDashboard(query: EmployeeListQuery): Promise<{
   return getEmployeeDashboardDTOs(query);
 }
 
-export async function getEmployeeSessionBootstrapDTO(employeeId: string): Promise<EmployeeSessionBootstrapDTO> {
-  return getEmployeeSessionBootstrap(employeeId);
+export async function getEmployeeSessionBootstrapDTO(
+  employeeId: string,
+  options?: { nullxesSessionId?: string },
+): Promise<EmployeeSessionBootstrapDTO> {
+  return getEmployeeSessionBootstrap(employeeId, options);
 }
 

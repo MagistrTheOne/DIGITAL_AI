@@ -2,7 +2,10 @@ import Link from "next/link";
 
 import { EmployeeInteractionPage } from "@/components/employee-interaction/EmployeeInteractionPage";
 import { isAnamPreviewEnabledForEmployee } from "@/features/employees/anam.server";
-import { getEmployeeForDashboard } from "@/features/employees/service.server";
+import {
+  getEmployeeForDashboard,
+  getEmployeeSessionBootstrap,
+} from "@/features/employees/service.server";
 import { getCurrentSession } from "@/lib/auth/session.server";
 import {
   getEmployeeRowById,
@@ -17,12 +20,25 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+function firstString(
+  v: string | string[] | undefined,
+): string | undefined {
+  if (typeof v === "string") return v;
+  if (Array.isArray(v) && typeof v[0] === "string") return v[0];
+  return undefined;
+}
+
 export default async function EmployeeDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ employeeId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { employeeId } = await params;
+  const sp = (await searchParams) ?? {};
+  const nullxesSessionId =
+    firstString(sp.nullxesSessionId) ?? firstString(sp.nx);
   const employee = await getEmployeeForDashboard(employeeId);
 
   if (!employee) {
@@ -75,9 +91,15 @@ export default async function EmployeeDetailPage({
     Boolean(userId) &&
     isAnamPreviewEnabledForEmployee(employeeId, employee.name, cfg);
 
+  const bootstrap = await getEmployeeSessionBootstrap(employeeId, {
+    nullxesSessionId,
+  });
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <EmployeeInteractionPage
+        key={`${employeeId}-${bootstrap.sessionId}`}
+        bootstrap={bootstrap}
         employeeId={employeeId}
         displayName={employee.name}
         roleLabel={employee.roleCategory}

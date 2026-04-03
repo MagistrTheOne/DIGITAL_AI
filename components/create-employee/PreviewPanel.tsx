@@ -1,23 +1,23 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import type { EmployeeRoleCategory } from "@/features/employees/types";
 import { cn } from "@/lib/utils";
 
-import { MiraLoopPreview } from "@/components/media/MiraLoopPreview";
-
 function displayName(raw: string) {
   const t = raw.trim();
   if (!t) return "Agent Vantage";
   return t.toLowerCase().endsWith("vantage") ? t : `${t} Vantage`;
+}
+
+function initialsFromDisplay(display: string) {
+  const parts = display.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
+  }
+  return display.slice(0, 2).toUpperCase() || "?";
 }
 
 export function PreviewPanel({
@@ -34,33 +34,47 @@ export function PreviewPanel({
   capabilities: string[];
 }) {
   const dn = displayName(name);
+  const initials = initialsFromDisplay(dn);
 
   return (
-    <Card className="border-neutral-800 bg-neutral-950/50 shadow-none ring-0">
-      <CardHeader>
-        <CardTitle className="text-base text-neutral-100">Preview</CardTitle>
-        <CardDescription className="text-neutral-500">
+    <div className="space-y-3 rounded-xl border border-neutral-800/80 bg-neutral-900/30 p-4">
+      <div className="space-y-0.5">
+        <h3 className="text-sm font-medium text-neutral-100">Preview</h3>
+        <p className="text-xs text-neutral-500">
           What you&apos;re about to deploy — confirm before activation.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <MiraLoopPreview />
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-neutral-200">{dn}</span>
-          {role ? (
-            <Badge variant="outline" className="border-neutral-700 text-neutral-300">
-              {role}
-            </Badge>
-          ) : (
-            <span className="text-xs text-amber-500/90">Select a role</span>
-          )}
+        </p>
+      </div>
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+          <Avatar className="size-14 shrink-0 border border-neutral-800">
+            <AvatarFallback className="bg-neutral-800 text-sm font-medium text-neutral-200">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2">
+              <span className="text-sm font-medium text-neutral-200">{dn}</span>
+              {role ? (
+                <Badge variant="outline" className="w-fit border-neutral-700 text-neutral-300">
+                  {role}
+                </Badge>
+              ) : (
+                <span className="text-xs text-amber-500/90">Select a role</span>
+              )}
+            </div>
+            <p className="text-[11px] leading-snug text-neutral-500">
+              Avatar preview (one-shot) — final render after deploy.
+            </p>
+          </div>
         </div>
-        <Separator className="bg-neutral-800" />
+
+        <Separator className="bg-neutral-800/80" />
+
         <div>
           <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
             Instructions
           </div>
-          <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-neutral-400">
+          <p className="mt-0.5 whitespace-pre-wrap text-xs leading-relaxed text-neutral-400">
             {prompt.trim() || "—"}
           </p>
         </div>
@@ -68,15 +82,17 @@ export function PreviewPanel({
           <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
             Capabilities
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {capabilities.length === 0 ? (
-              <span className="text-sm text-neutral-500">None selected</span>
+              <span className="text-xs text-neutral-500">None selected</span>
             ) : (
               capabilities.map((c) => (
                 <Badge
                   key={c}
                   variant="secondary"
-                  className={cn("border border-neutral-700 bg-neutral-900 text-neutral-300")}
+                  className={cn(
+                    "border border-neutral-700 bg-neutral-900 px-2 py-0 text-[11px] text-neutral-300",
+                  )}
                 >
                   {c}
                 </Badge>
@@ -89,7 +105,7 @@ export function PreviewPanel({
             Avatar note: {avatarPlaceholder.trim()}
           </p>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

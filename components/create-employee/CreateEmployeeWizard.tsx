@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { dashboardGlassCardClassName } from "@/components/shared/dashboardGlassCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,17 +85,17 @@ export function CreateEmployeeWizard() {
   };
 
   return (
-    <Card className="border-neutral-800 bg-neutral-950/50 shadow-none ring-0">
-      <CardHeader className="space-y-4">
-        <div>
-          <CardTitle className="text-lg text-neutral-100">Digital employee onboarding</CardTitle>
-          <CardDescription className="text-neutral-500">
-            Configure role, identity, and behavior — then deploy to your workforce.
+    <Card size="sm" className={dashboardGlassCardClassName()}>
+      <CardHeader className="space-y-3 pb-2">
+        <div className="space-y-0.5">
+          <CardTitle className="text-sm text-neutral-100">Digital employee onboarding</CardTitle>
+          <CardDescription className="text-xs text-neutral-500">
+            Configure role, identity, and behavior — then deploy.
           </CardDescription>
         </div>
         <Stepper currentStep={step} totalSteps={TOTAL_STEPS} />
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {error ? (
           <Alert variant="destructive" className="border-red-500/40 bg-red-950/30">
             <AlertTitle className="text-sm">Couldn&apos;t create employee</AlertTitle>
@@ -131,7 +132,7 @@ export function CreateEmployeeWizard() {
           />
         ) : null}
       </CardContent>
-      <CardFooter className="flex flex-col gap-3 border-t border-neutral-800 pt-6 sm:flex-row sm:justify-between">
+      <CardFooter className="flex flex-col gap-3 border-t border-neutral-800/80 pt-3 sm:flex-row sm:justify-between">
         <Button
           type="button"
           variant="outline"

@@ -1,5 +1,6 @@
 "use client";
 
+import { analyticsCardClassName } from "@/components/analytics/analyticsSurface";
 import {
   Card,
   CardContent,
@@ -13,8 +14,6 @@ import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import type { AnalyticsDashboardDTO } from "@/features/analytics/types";
 import { cn } from "@/lib/utils";
-
-const cardSurface = "border-neutral-800 bg-neutral-950/50 text-neutral-200 shadow-none ring-0";
 
 export function RealtimePanel({
   realtime,
@@ -49,21 +48,24 @@ export function RealtimePanel({
       : [{ initials: "—", name: "—" }, { initials: "—", name: "—" }, { initials: "—", name: "—" }];
 
   return (
-    <Card size="sm" className={cn(cardSurface, "border-emerald-500/10")}>
-      <CardHeader>
-        <CardTitle className="text-base text-neutral-100">Real-time system status</CardTitle>
-        <CardDescription className="text-neutral-500">
-          Live throughput and voice streams.
+    <Card
+      size="sm"
+      className={cn(analyticsCardClassName(), "border-emerald-500/15")}
+    >
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm text-neutral-100">Live operations</CardTitle>
+        <CardDescription className="text-xs text-neutral-500">
+          Sessions, event rate, stream health.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-2.5">
         {metrics.map((row, i) => (
           <div key={row.label}>
-            {i > 0 ? <Separator className="mb-4 bg-neutral-800" /> : null}
-            <div className="flex items-center justify-between gap-3">
+            {i > 0 ? <Separator className="mb-2.5 bg-neutral-800/80" /> : null}
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="text-xs text-neutral-500">{row.label}</div>
-                <div className="mt-0.5 text-lg font-semibold tabular-nums text-neutral-100">
+                <div className="text-[11px] text-neutral-500">{row.label}</div>
+                <div className="mt-0.5 text-base font-semibold tabular-nums text-neutral-100">
                   {row.value}
                 </div>
               </div>
@@ -83,11 +85,11 @@ export function RealtimePanel({
           </div>
         ))}
 
-        <Separator className="bg-neutral-800" />
+        <Separator className="bg-neutral-800/80" />
 
         <div>
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-xs text-neutral-500">Speaking now</span>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <span className="text-[11px] text-neutral-500">Speaking now</span>
             <span className="text-[10px] uppercase tracking-wide text-neutral-600">
               Avatars
             </span>

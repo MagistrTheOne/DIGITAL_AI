@@ -1,5 +1,4 @@
 import { AppHeader } from "@/components/app/AppHeader";
-
 import { BusinessImpactCard } from "@/components/analytics/BusinessImpactCard";
 import { EmployeePerformanceList } from "@/components/analytics/EmployeePerformanceList";
 import { MetricsCards } from "@/components/analytics/MetricsCards";
@@ -7,7 +6,10 @@ import { RealtimePanel } from "@/components/analytics/RealtimePanel";
 import { TimelineMini } from "@/components/analytics/TimelineMini";
 import { UsagePanel } from "@/components/analytics/UsagePanel";
 import { WorkforceLevelCard } from "@/components/analytics/WorkforceLevelCard";
+import { analyticsCardClassName } from "@/components/analytics/analyticsSurface";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { AnalyticsDashboardDTO, UsagePlanLimits } from "@/features/analytics/types";
+import { cn } from "@/lib/utils";
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -38,23 +40,39 @@ export function AnalyticsPage({
   const speaking = speakingAvatarsFromEmployees(data.employees);
 
   return (
-    <div className="flex flex-col gap-8">
-      <AppHeader
-        title="Analytics"
-        subtitle="Operate, level up, and monetize your AI workforce"
-      />
+    <div className="flex flex-col gap-4">
+      <div className="space-y-3">
+        <AppHeader
+          compact
+          title="Analytics"
+          subtitle="Capacity, cost, and reliability first — then per-agent operations."
+        />
+        <Alert
+          className={cn(
+            analyticsCardClassName(),
+            "border-neutral-800/60 py-2.5 **:data-[slot=alert-description]:text-neutral-400",
+          )}
+          variant="default"
+        >
+          <AlertTitle className="sr-only">What this dashboard prioritizes</AlertTitle>
+          <AlertDescription className="text-xs leading-snug">
+            <span className="font-medium text-neutral-300">Business & enterprise focus:</span>{" "}
+            plan usage and spend, SLA-style quality (success & latency), then live ops and
+            workforce progression.
+          </AlertDescription>
+        </Alert>
+      </div>
 
       <MetricsCards kpis={data.kpis} />
 
-      <WorkforceLevelCard workforce={data.workforceLevel} />
-
-      <UsagePanel usage={data.usage} limits={usageLimits} />
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <EmployeePerformanceList employees={data.employees} />
+      <div className="grid gap-3 lg:grid-cols-12">
+        <div className="lg:col-span-5">
+          <UsagePanel usage={data.usage} limits={usageLimits} />
         </div>
-        <div className="flex flex-col gap-6">
+        <div className="lg:col-span-4">
+          <BusinessImpactCard businessImpact={data.businessImpact} />
+        </div>
+        <div className="lg:col-span-3">
           <RealtimePanel
             realtime={data.realtime}
             speaking={speaking}
@@ -63,9 +81,14 @@ export function AnalyticsPage({
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <BusinessImpactCard businessImpact={data.businessImpact} />
-        <TimelineMini timeline={data.timeline} />
+      <div className="grid gap-3 lg:grid-cols-12">
+        <div className="lg:col-span-8">
+          <EmployeePerformanceList employees={data.employees} />
+        </div>
+        <div className="flex flex-col gap-3 lg:col-span-4">
+          <WorkforceLevelCard workforce={data.workforceLevel} />
+          <TimelineMini timeline={data.timeline} />
+        </div>
       </div>
     </div>
   );
