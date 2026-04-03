@@ -1,16 +1,12 @@
 import Link from "next/link";
 
 import { EmployeeInteractionPage } from "@/components/employee-interaction/EmployeeInteractionPage";
-import { isAnamPreviewEnabledForEmployee } from "@/features/employees/anam.server";
 import {
   getEmployeeForDashboard,
   getEmployeeSessionBootstrap,
 } from "@/features/employees/service.server";
+import { isNullxesRealtimeVoiceEnvEnabled } from "@/lib/env/nullxes-realtime-voice.server";
 import { getCurrentSession } from "@/lib/auth/session.server";
-import {
-  getEmployeeRowById,
-  type EmployeeConfigJson,
-} from "@/services/db/repositories/employees.repository";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -83,19 +79,13 @@ export default async function EmployeeDetailPage({
     );
   }
 
-  const session = await getCurrentSession();
-  const userId = session?.user?.id;
-  const row = userId ? await getEmployeeRowById(employeeId, userId) : null;
-  const cfg = (row?.config ?? {}) as EmployeeConfigJson;
-  const anamPreviewEnabled =
-    Boolean(userId) &&
-    isAnamPreviewEnabledForEmployee(employeeId, employee.name, cfg);
-
   const bootstrap = await getEmployeeSessionBootstrap(employeeId, {
     nullxesSessionId,
   });
 
   const openAiChatEnabled = Boolean(process.env.OPENAI_API_KEY?.trim());
+  const realtimeVoiceEnabled =
+    openAiChatEnabled && isNullxesRealtimeVoiceEnvEnabled();
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -105,8 +95,8 @@ export default async function EmployeeDetailPage({
         employeeId={employeeId}
         displayName={employee.name}
         roleLabel={employee.roleCategory}
-        anamPreviewEnabled={anamPreviewEnabled}
         openAiChatEnabled={openAiChatEnabled}
+        realtimeVoiceEnabled={realtimeVoiceEnabled}
       />
     </div>
   );

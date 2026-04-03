@@ -18,6 +18,6 @@
 
 1. Route Handler `POST /api/arachne-x/chat` (или WebSocket): прокси к реальному оркестратору, стриминг `content`.
 2. При стриминге: обновлять последнее сообщение с `status: 'streaming'` и накапливать `content`.
-3. Синхронизация с Anam: `talk()` / `sendUserMessage` по финальному или по чанкам — отдельный контракт.
+3. Голос на странице сотрудника: OpenAI Realtime (`NULLXES_REALTIME_VOICE`) — отдельный контур от ARACHNE-X WebSocket.
 
 См. также [`arachne-x-ultra-modes.md`](./arachne-x-ultra-modes.md).

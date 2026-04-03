@@ -3,7 +3,6 @@
 import * as React from "react";
 import { flushSync } from "react-dom";
 
-import { AnamAvatarPreview } from "@/components/employee-interaction/AnamAvatarPreview";
 import { AvatarStage } from "@/components/employee-interaction/AvatarStage";
 import { ChatInput } from "@/components/employee-interaction/ChatInput";
 import { ChatMessages } from "@/components/employee-interaction/ChatMessages";
@@ -19,6 +18,7 @@ import { useAvatarRuntime } from "@/features/arachine-x/client/useAvatarRuntime"
 import { EmployeeOpenAiSessionsSidebar } from "@/components/employee-interaction/EmployeeOpenAiSessionsSidebar";
 import { postEmployeeOpenAiChat } from "@/features/employees/openaiChat.client";
 import { useEmployeeOpenAiSessions } from "@/features/employees/useEmployeeOpenAiSessions";
+import { useEmployeeRealtimeVoice } from "@/features/employees/useEmployeeRealtimeVoice";
 import type { EmployeeSessionBootstrapDTO } from "@/features/employees/types";
 
 function newId() {
@@ -41,16 +41,17 @@ export function EmployeeInteractionPage({
   displayName,
   roleLabel,
   employeeId,
-  anamPreviewEnabled,
   openAiChatEnabled,
+  realtimeVoiceEnabled,
 }: {
   bootstrap: EmployeeSessionBootstrapDTO;
   displayName: string;
   roleLabel?: string;
   employeeId: string;
-  anamPreviewEnabled?: boolean;
-  /** Server: true when OPENAI_API_KEY is set — transcript uses OpenAI Responses API. */
+  /** Server: true when OPENAI_API_KEY is set — transcript uses cloud Responses API (server-side). */
   openAiChatEnabled: boolean;
+  /** Server: NULLXES_REALTIME_VOICE=1 + API key — push-to-talk uses Realtime (gpt-realtime-1.5 by default). */
+  realtimeVoiceEnabled?: boolean;
 }) {
   const avatarBootstrap = React.useMemo(() => toAvatarBootstrap(bootstrap), [bootstrap]);
 
@@ -99,8 +100,42 @@ export function EmployeeInteractionPage({
   const [pendingImageDataUrl, setPendingImageDataUrl] = React.useState<
     string | null
   >(null);
-  const [voiceState, setVoiceState] = React.useState<VoiceUiState>("idle");
+  const [stubVoiceState, setStubVoiceState] = React.useState<VoiceUiState>("idle");
   const [transcriptBusy, setTranscriptBusy] = React.useState(false);
+
+  const appendTranscriptMessage = React.useCallback(
+    (m: InteractionMessage) => {
+      setTranscriptMessages((prev) => [...prev, m]);
+    },
+    [setTranscriptMessages],
+  );
+
+  const patchTranscriptMessage = React.useCallback(
+    (id: string, patch: Partial<Pick<InteractionMessage, "content">>) => {
+      setTranscriptMessages((prev) =>
+        prev.map((msg) => (msg.id === id ? { ...msg, ...patch } : msg)),
+      );
+    },
+    [setTranscriptMessages],
+  );
+
+  const voiceUiEnabled = Boolean(realtimeVoiceEnabled);
+  const {
+    voiceState: realtimeVoiceState,
+    voiceError: realtimeVoiceError,
+    clearVoiceError,
+    onVoicePress: realtimeOnVoicePress,
+    realtimeVoiceActive,
+    voiceButtonLabels,
+  } = useEmployeeRealtimeVoice({
+    employeeId,
+    enabled: voiceUiEnabled,
+    openAiChatEnabled,
+    newId,
+    appendTranscriptMessage,
+    patchTranscriptMessage,
+    maybeAutonameFromUserText,
+  });
 
   const processingTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -238,20 +273,23 @@ export function EmployeeInteractionPage({
     transcriptBusy,
   ]);
 
-  const onVoicePress = React.useCallback(() => {
-    if (voiceState === "idle") {
-      setVoiceState("recording");
+  const stubOnVoicePress = React.useCallback(() => {
+    if (stubVoiceState === "idle") {
+      setStubVoiceState("recording");
       return;
     }
-    if (voiceState === "recording") {
-      setVoiceState("processing");
+    if (stubVoiceState === "recording") {
+      setStubVoiceState("processing");
       if (processingTimer.current) clearTimeout(processingTimer.current);
       processingTimer.current = setTimeout(() => {
-        setVoiceState("idle");
+        setStubVoiceState("idle");
         processingTimer.current = null;
       }, 1600);
     }
-  }, [voiceState]);
+  }, [stubVoiceState]);
+
+  const voiceState = realtimeVoiceActive ? realtimeVoiceState : stubVoiceState;
+  const onVoicePress = realtimeVoiceActive ? realtimeOnVoicePress : stubOnVoicePress;
 
   const realtimeError =
     !bootstrap.realtime.ok
@@ -268,6 +306,20 @@ export function EmployeeInteractionPage({
         voiceState={voiceState}
       />
 
+      {realtimeVoiceError ? (
+        <div className="mx-6 mt-2 rounded-lg border border-red-900/50 bg-red-950/25 px-3 py-2 text-xs text-red-200/90">
+          <span className="text-red-300/90">Voice: </span>
+          {realtimeVoiceError}
+          <button
+            type="button"
+            onClick={clearVoiceError}
+            className="ml-2 underline decoration-red-400/50 hover:decoration-red-300"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+
       {realtimeError ? (
         <div className="mx-6 mt-2 rounded-lg border border-amber-900/60 bg-amber-950/30 px-3 py-2 text-xs text-amber-200/90">
           Realtime: {realtimeError}
@@ -276,17 +328,12 @@ export function EmployeeInteractionPage({
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 pt-6 lg:flex-row lg:gap-0">
         <section className="flex shrink-0 flex-col items-center gap-8 lg:w-[42%] lg:max-w-xl lg:justify-center lg:border-r lg:border-neutral-800 lg:pr-8 lg:pt-4">
-          {anamPreviewEnabled ? (
-            <AnamAvatarPreview
-              employeeId={employeeId}
-              displayName={displayName}
-            />
-          ) : (
-            <AvatarStage displayName={displayName} />
-          )}
-          {!anamPreviewEnabled && (
-            <VoiceControlButton state={voiceState} onPress={onVoicePress} />
-          )}
+          <AvatarStage displayName={displayName} />
+          <VoiceControlButton
+            state={voiceState}
+            onPress={onVoicePress}
+            labels={realtimeVoiceActive ? voiceButtonLabels : undefined}
+          />
         </section>
 
         <Separator className="bg-neutral-800 lg:hidden" />
@@ -299,7 +346,9 @@ export function EmployeeInteractionPage({
               </h2>
               <p className="text-[11px] text-neutral-600">
                 {openAiChatEnabled
-                  ? "OpenAI · agent + tools + vision (server)"
+                  ? realtimeVoiceEnabled
+                    ? "NULLXES transcript · cloud · tools + vision ·  Realtime voice"
+                    : "NULLXES transcript · ARACHNE-X cloud · tools + vision (server)"
                   : "ARACHNE-X · WebSocket (MVP)"}
                 {" · "}
                 phase{" "}

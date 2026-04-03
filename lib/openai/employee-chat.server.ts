@@ -1,11 +1,15 @@
 import OpenAI, { APIError } from "openai";
 import type {
+  FileSearchTool,
   FunctionTool,
   Response as OpenAiResponse,
   ResponseFunctionToolCall,
+  ResponseIncludable,
   ResponseInputContent,
   ResponseInputItem,
   ResponseOutputItem,
+  SkillReference,
+  Tool,
 } from "openai/resources/responses/responses";
 
 import type { EmployeeConfigJson } from "@/services/db/repositories/employees.repository";
@@ -32,6 +36,66 @@ function parseReasoning():
   return undefined;
 }
 
+function parseShellSkillReferences(): SkillReference[] | null {
+  const raw = process.env.NULLXES_CHAT_SHELL_SKILLS?.trim();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    const out: SkillReference[] = [];
+    for (const item of parsed) {
+      if (typeof item === "string" && item.trim()) {
+        out.push({ type: "skill_reference", skill_id: item.trim() });
+        continue;
+      }
+      if (item && typeof item === "object" && "skill_id" in item) {
+        const skill_id = String(
+          (item as { skill_id: unknown }).skill_id,
+        ).trim();
+        if (!skill_id) continue;
+        const ref: SkillReference = { type: "skill_reference", skill_id };
+        const v = (item as { version?: unknown }).version;
+        if (v !== undefined && v !== null) {
+          ref.version =
+            typeof v === "number" && Number.isFinite(v)
+              ? String(v)
+              : String(v);
+        }
+        out.push(ref);
+      }
+    }
+    return out.length ? out : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseVectorStoreIds(): string[] {
+  const raw = process.env.NULLXES_CHAT_VECTOR_STORE_IDS?.trim();
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function parseFileSearchMaxResults(): number | undefined {
+  const raw = process.env.NULLXES_CHAT_FILE_SEARCH_MAX_RESULTS?.trim();
+  if (!raw) return undefined;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 50) return undefined;
+  return n;
+}
+
+function fileSearchIncludeResultsEnabled(): boolean {
+  return process.env.NULLXES_CHAT_FILE_SEARCH_INCLUDE_RESULTS === "1";
+}
+
+function buildResponseInclude(vectorStoreIds: string[]): ResponseIncludable[] | undefined {
+  if (!vectorStoreIds.length || !fileSearchIncludeResultsEnabled()) return undefined;
+  return ["file_search_call.results"];
+}
+
 function buildInstructions(
   name: string,
   role: string,
@@ -52,15 +116,21 @@ function buildInstructions(
   );
 }
 
+/** Shared persona text for transcript chat and Realtime voice sessions. */
+export function buildEmployeeSystemPrompt(
+  name: string,
+  role: string,
+  cfg: EmployeeConfigJson,
+): string {
+  return buildInstructions(name, role, cfg);
+}
+
 function isFunctionCall(o: ResponseOutputItem): o is ResponseFunctionToolCall {
   return (o as { type?: string }).type === "function_call";
 }
 
-function buildAgentTools(): (
-  | FunctionTool
-  | { type: "web_search" }
-)[] {
-  const tools: (FunctionTool | { type: "web_search" })[] = [
+function buildAgentTools(): Tool[] {
+  const tools: Tool[] = [
     {
       type: "function",
       name: "nullxes_workspace_facts",
@@ -120,6 +190,35 @@ function buildAgentTools(): (
       strict: true,
     },
   ];
+
+  const shellSkills = parseShellSkillReferences();
+  if (shellSkills?.length) {
+    const model = getChatModel();
+    if (!/^gpt-5/i.test(model)) {
+      console.warn(
+        "[employee-chat] NULLXES_CHAT_SHELL_SKILLS is set; hosted shell + skills usually needs a capable model (e.g. gpt-5.4). Current OPENAI_CHAT_MODEL:",
+        model,
+      );
+    }
+    tools.push({
+      type: "shell",
+      environment: {
+        type: "container_auto",
+        skills: shellSkills,
+      },
+    });
+  }
+
+  const vectorStoreIds = parseVectorStoreIds();
+  if (vectorStoreIds.length) {
+    const fileSearch: FileSearchTool = {
+      type: "file_search",
+      vector_store_ids: vectorStoreIds,
+    };
+    const maxNum = parseFileSearchMaxResults();
+    if (maxNum !== undefined) fileSearch.max_num_results = maxNum;
+    tools.push(fileSearch);
+  }
 
   if (webSearchEnabled()) {
     tools.push({ type: "web_search" });
@@ -265,7 +364,7 @@ export async function runEmployeeOpenAiChatTurn(
     return {
       ok: false,
       status: 503,
-      error: "OpenAI is not configured (OPENAI_API_KEY).",
+      error: "Transcript assistant is not configured (missing API key).",
     };
   }
 
@@ -274,6 +373,8 @@ export async function runEmployeeOpenAiChatTurn(
   const instructions = buildInstructions(input.name, input.role, input.config);
   const tools = buildAgentTools();
   const reasoning = parseReasoning();
+  const vectorStoreIds = parseVectorStoreIds();
+  const responseInclude = buildResponseInclude(vectorStoreIds);
 
   const toolCtx: ToolContext = {
     employeeName: input.name,
@@ -361,7 +462,7 @@ export async function runEmployeeOpenAiChatTurn(
       return {
         ok: false,
         status: e.status && e.status >= 400 && e.status < 600 ? e.status : 502,
-        error: e.message || "OpenAI API error",
+        error: e.message || "Transcript assistant request failed.",
       };
     }
     const msg = e instanceof Error ? e.message : "Unknown error";

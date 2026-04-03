@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { isMiraAnamEmployeeName } from "@/lib/miraEmployeeName";
 import { cn } from "@/lib/utils";
 
 const MIRA_VIDEO_SRC = "/avatars/Mira/mira.mp4";

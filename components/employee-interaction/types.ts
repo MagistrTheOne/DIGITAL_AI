@@ -5,7 +5,7 @@ export type InteractionMessage = {
   createdAt: number;
   /** data:image/...;base64,... для vision-туров (только user). */
   imageUrls?: string[];
-  /** Сообщение только для UI (не уходит в OpenAI transcript API). */
+  /** Сообщение только для UI (не уходит в серверный transcript API). */
   ephemeral?: boolean;
   /** Сворачиваемый trace рассуждения (ARACHNE-X / chain-of-thought). Только у assistant. */
   thinking?: string;

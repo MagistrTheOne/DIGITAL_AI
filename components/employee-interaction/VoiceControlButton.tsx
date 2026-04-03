@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 import type { VoiceUiState } from "@/components/employee-interaction/types";
 
-const LABELS: Record<VoiceUiState, string> = {
+const DEFAULT_LABELS: Record<VoiceUiState, string> = {
   idle: "Tap to speak",
   recording: "Listening… tap to stop",
   processing: "Processing…",
@@ -16,10 +16,14 @@ const LABELS: Record<VoiceUiState, string> = {
 export function VoiceControlButton({
   state,
   onPress,
+  labels,
 }: {
   state: VoiceUiState;
   onPress: () => void;
+  /** Override captions (e.g. push-to-talk vs server VAD). */
+  labels?: Partial<Record<VoiceUiState, string>>;
 }) {
+  const merged = { ...DEFAULT_LABELS, ...labels };
   const busy = state === "processing";
 
   return (
@@ -31,7 +35,7 @@ export function VoiceControlButton({
         disabled={busy}
         onClick={onPress}
         aria-pressed={state === "recording"}
-        aria-label={LABELS[state]}
+        aria-label={merged[state]}
         className={cn(
           "size-20 rounded-full border-2 shadow-lg transition-all duration-300",
           "border-neutral-600 bg-neutral-900 text-neutral-100 hover:bg-neutral-800",
@@ -48,7 +52,7 @@ export function VoiceControlButton({
           <Mic className="size-9" aria-hidden />
         )}
       </Button>
-      <p className="max-w-[14rem] text-center text-xs text-neutral-500">{LABELS[state]}</p>
+      <p className="max-w-56 text-center text-xs text-neutral-500">{merged[state]}</p>
     </div>
   );
 }

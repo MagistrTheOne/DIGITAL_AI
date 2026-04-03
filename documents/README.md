@@ -8,7 +8,6 @@
 
 - **Backlog (enterprise):** экспорт или снимок дашборда `/analytics` (CSV/PDF) либо read-only ссылка для финансов — в порядке блоков: usage → ROI → SLA-метрики (отдельная задача после текущего UI).
 
-- [Anam: пайплайн аватара](./anam-avatar-pipeline.md)
 - [Arachne-X: каркас чата](./arachne-x-chat-scaffold.md)
 - [Arachne-X: ultra modes](./arachne-x-ultra-modes.md)
 

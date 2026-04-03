@@ -14,7 +14,6 @@
     "db:auth:generate": "npx auth@latest generate --config lib/auth.ts --output db/schema.ts --yes"
   },
   "dependencies": {
-    "@anam-ai/js-sdk": "^4.12.0",
     "@base-ui/react": "^1.3.0",
     "@better-auth/drizzle-adapter": "^1.5.5",
     "@better-auth/infra": "^0.1.12",

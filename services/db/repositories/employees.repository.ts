@@ -25,15 +25,6 @@ export type EmployeeConfigJson = {
   capabilities?: string[];
   avatarPlaceholder?: string | null;
   videoPreviewUrl?: string | null;
-  /** Anam Lab persona id (session-token oneOf `personaId`). */
-  anamPersonaId?: string;
-  /** Legacy custom personaConfig (avatar + voice + llm) if persona id not used. */
-  anamAvatarId?: string;
-  /** Overrides `prompt` for Anam `systemPrompt` only (optional). */
-  anamSystemPrompt?: string;
-  anamEnvironmentId?: string;
-  anamVoiceId?: string;
-  anamLlmId?: string;
 };
 
 function mapRow(r: typeof employee.$inferSelect): EmployeeRecord {
@@ -110,7 +101,7 @@ export async function getEmployeeById(
   }
 }
 
-/** Full row for BFF (e.g. Anam session: prompt + config). */
+/** Full DB row (e.g. chat / mint routes need `config` JSON). */
 export async function getEmployeeRowById(
   employeeId: EmployeeId,
   userId?: string,

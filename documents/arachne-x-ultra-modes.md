@@ -57,7 +57,7 @@
 | Тема | Где описано |
 |------|-------------|
 | **Realtime session mode** + UI/клиент | Отдельный док: **ARACHNE-X-ULTRA × frontend** (не дублировать здесь). |
-| Внешние провайдеры голоса/аватара (например Anam) для проверки пайплайна | [`anam-avatar-pipeline.md`](./anam-avatar-pipeline.md) |
+| Голос в дашборде (GPT Realtime) | См. `NULLXES_REALTIME_*` в `.env.example`, `useEmployeeRealtimeVoice` |
 
 ---
 
