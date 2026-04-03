@@ -6,6 +6,19 @@ import { dash } from "@better-auth/infra";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 
+function getAuthSecret(): string {
+  const s = process.env.BETTER_AUTH_SECRET?.trim();
+  if (process.env.NODE_ENV === "production") {
+    if (!s) {
+      throw new Error(
+        "BETTER_AUTH_SECRET is required in production. Set it in your environment.",
+      );
+    }
+    return s;
+  }
+  return s || "dev-secret-only-local";
+}
+
 /** Origin only, no trailing slash. */
 function getAuthOrigin(): string | undefined {
   const raw =
@@ -39,7 +52,7 @@ export const auth = betterAuth({
     // Neon serverless HTTP driver — без классических транзакций
     transaction: false,
   }),
-  secret: process.env.BETTER_AUTH_SECRET || "dev-secret",
+  secret: getAuthSecret(),
   baseURL: authOrigin,
   advanced: {
     trustedProxyHeaders: true,
@@ -51,6 +64,11 @@ export const auth = betterAuth({
   ],
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url }) => {
+      // Replace with Resend / transactional email in production.
+      // eslint-disable-next-line no-console
+      console.log(`[Better Auth] Password reset for ${user.email}: ${url}`);
+    },
   },
   socialProviders:
     googleClientId && googleClientSecret
