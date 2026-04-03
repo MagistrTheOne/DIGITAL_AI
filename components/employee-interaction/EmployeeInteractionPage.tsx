@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { flushSync } from "react-dom";
 
 import { AnamAvatarPreview } from "@/components/employee-interaction/AnamAvatarPreview";
 import { AvatarStage } from "@/components/employee-interaction/AvatarStage";
@@ -15,6 +16,9 @@ import { VoiceControlButton } from "@/components/employee-interaction/VoiceContr
 import { Separator } from "@/components/ui/separator";
 import type { ArachineXEvent } from "@/features/arachine-x/event-system/eventTypes";
 import { useAvatarRuntime } from "@/features/arachine-x/client/useAvatarRuntime";
+import { EmployeeOpenAiSessionsSidebar } from "@/components/employee-interaction/EmployeeOpenAiSessionsSidebar";
+import { postEmployeeOpenAiChat } from "@/features/employees/openaiChat.client";
+import { useEmployeeOpenAiSessions } from "@/features/employees/useEmployeeOpenAiSessions";
 import type { EmployeeSessionBootstrapDTO } from "@/features/employees/types";
 
 function newId() {
@@ -38,12 +42,15 @@ export function EmployeeInteractionPage({
   roleLabel,
   employeeId,
   anamPreviewEnabled,
+  openAiChatEnabled,
 }: {
   bootstrap: EmployeeSessionBootstrapDTO;
   displayName: string;
   roleLabel?: string;
   employeeId: string;
   anamPreviewEnabled?: boolean;
+  /** Server: true when OPENAI_API_KEY is set — transcript uses OpenAI Responses API. */
+  openAiChatEnabled: boolean;
 }) {
   const avatarBootstrap = React.useMemo(() => toAvatarBootstrap(bootstrap), [bootstrap]);
 
@@ -55,16 +62,43 @@ export function EmployeeInteractionPage({
     state: avatarState,
   } = useAvatarRuntime(avatarBootstrap);
 
-  const [messages, setMessages] = React.useState<InteractionMessage[]>(() => [
-    {
-      id: newId(),
-      role: "assistant",
-      content:
-        "This transcript is a live record of your conversation with the AI employee. Messages sync over ARACHNE-X WebSocket when realtime is available.",
-      createdAt: Date.now(),
-    },
-  ]);
+  const [wsMessages, setWsMessages] = React.useState<InteractionMessage[]>(() =>
+    openAiChatEnabled
+      ? []
+      : [
+          {
+            id: newId(),
+            role: "assistant",
+            content:
+              "This transcript is a live record of your conversation with the AI employee. Messages sync over ARACHNE-X WebSocket when realtime is available.",
+            createdAt: Date.now(),
+            ephemeral: true,
+          },
+        ],
+  );
+
+  const {
+    hydrated: openAiHydrated,
+    sessions: openAiSessionList,
+    activeSessionId: openAiActiveSessionId,
+    messages: openAiMessages,
+    setMessages: setOpenAiMessages,
+    selectSession,
+    newSession,
+    renameSession,
+    deleteSession,
+    maybeAutonameFromUserText,
+  } = useEmployeeOpenAiSessions(employeeId, openAiChatEnabled);
+
+  const messages = openAiChatEnabled ? openAiMessages : wsMessages;
+  const setTranscriptMessages = openAiChatEnabled
+    ? setOpenAiMessages
+    : setWsMessages;
+
   const [draft, setDraft] = React.useState("");
+  const [pendingImageDataUrl, setPendingImageDataUrl] = React.useState<
+    string | null
+  >(null);
   const [voiceState, setVoiceState] = React.useState<VoiceUiState>("idle");
   const [transcriptBusy, setTranscriptBusy] = React.useState(false);
 
@@ -91,7 +125,8 @@ export function EmployeeInteractionPage({
     return subscribeEvents((ev: ArachineXEvent) => {
       if (ev.type !== "chat.message.received") return;
       if (ev.message.from !== "assistant") return;
-      setMessages((prev) => {
+      if (openAiChatEnabled) return;
+      setWsMessages((prev) => {
         if (prev.some((m) => m.id === ev.message.id)) return prev;
         return [
           ...prev,
@@ -105,28 +140,103 @@ export function EmployeeInteractionPage({
         ];
       });
     });
-  }, [bootstrap.realtime.ok, bootstrap.sessionId, subscribeEvents]);
+  }, [
+    bootstrap.realtime.ok,
+    bootstrap.sessionId,
+    openAiChatEnabled,
+    subscribeEvents,
+  ]);
+
+  const chatInputEnabled = openAiChatEnabled || bootstrap.realtime.ok;
 
   const sendMessage = React.useCallback(async () => {
     const text = draft.trim();
-    if (!text || transcriptBusy) return;
-    if (!bootstrap.realtime.ok) return;
+    const image = pendingImageDataUrl;
+    if ((!text && !image) || transcriptBusy) return;
+    if (!chatInputEnabled) return;
 
     setDraft("");
+    setPendingImageDataUrl(null);
     const userMsg: InteractionMessage = {
       id: newId(),
       role: "user",
       content: text,
       createdAt: Date.now(),
+      ...(image ? { imageUrls: [image] } : {}),
     };
-    setMessages((prev) => [...prev, userMsg]);
+
+    if (openAiChatEnabled) {
+      let thread: InteractionMessage[] = [];
+      flushSync(() => {
+        setTranscriptMessages((prev) => {
+          thread = [...prev, userMsg];
+          return thread;
+        });
+      });
+      if (text.trim()) {
+        maybeAutonameFromUserText(text);
+      }
+      setTranscriptBusy(true);
+      try {
+        const transcript = thread
+          .filter((m) => !m.ephemeral)
+          .map((m) => ({
+            role: m.role,
+            content: m.content,
+            ...(m.role === "user" && m.imageUrls?.length
+              ? { images: m.imageUrls }
+              : {}),
+          }));
+        const { content } = await postEmployeeOpenAiChat({
+          employeeId,
+          messages: transcript,
+        });
+        setTranscriptMessages((prev) => [
+          ...prev,
+          {
+            id: newId(),
+            role: "assistant",
+            content,
+            createdAt: Date.now(),
+            status: "complete" as const,
+          },
+        ]);
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : "Unknown error";
+        setTranscriptMessages((prev) => [
+          ...prev,
+          {
+            id: newId(),
+            role: "assistant",
+            content: `Couldn’t get a reply. ${detail}`,
+            createdAt: Date.now(),
+            status: "complete" as const,
+          },
+        ]);
+      } finally {
+        setTranscriptBusy(false);
+      }
+      return;
+    }
+
+    setTranscriptMessages((prev) => [...prev, userMsg]);
     setTranscriptBusy(true);
     try {
       sendChat(text);
     } finally {
       setTranscriptBusy(false);
     }
-  }, [bootstrap.realtime.ok, draft, sendChat, transcriptBusy]);
+  }, [
+    chatInputEnabled,
+    draft,
+    employeeId,
+    maybeAutonameFromUserText,
+    openAiChatEnabled,
+    pendingImageDataUrl,
+    sendChat,
+    setTranscriptMessages,
+    transcriptBusy,
+  ]);
 
   const onVoicePress = React.useCallback(() => {
     if (voiceState === "idle") {
@@ -181,23 +291,48 @@ export function EmployeeInteractionPage({
 
         <Separator className="bg-neutral-800 lg:hidden" />
 
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-neutral-800/80 bg-neutral-950/40 lg:border-0 lg:bg-transparent">
-          <div className="border-b border-neutral-800 px-3 py-2 lg:border-neutral-800">
-            <h2 className="text-xs font-medium uppercase tracking-wider text-neutral-500">
-              Transcript
-            </h2>
-            <p className="text-[11px] text-neutral-600">
-              ARACHNE-X · WebSocket chat (MVP) · phase{" "}
-              <span className="font-mono text-neutral-500">{avatarState.phase}</span>
-            </p>
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-neutral-800/80 bg-neutral-950/40 lg:flex-row lg:border-0 lg:bg-transparent">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="border-b border-neutral-800 px-3 py-2 lg:border-neutral-800">
+              <h2 className="text-xs font-medium uppercase tracking-wider text-neutral-500">
+                Transcript
+              </h2>
+              <p className="text-[11px] text-neutral-600">
+                {openAiChatEnabled
+                  ? "OpenAI · agent + tools + vision (server)"
+                  : "ARACHNE-X · WebSocket (MVP)"}
+                {" · "}
+                phase{" "}
+                <span className="font-mono text-neutral-500">
+                  {avatarState.phase}
+                </span>
+              </p>
+            </div>
+            <ChatMessages
+              messages={messages}
+              busy={transcriptBusy}
+              hideEmptyPlaceholder={openAiChatEnabled}
+            />
+            <ChatInput
+              value={draft}
+              onChange={setDraft}
+              onSend={() => void sendMessage()}
+              disabled={transcriptBusy || !chatInputEnabled}
+              visionEnabled={openAiChatEnabled}
+              attachmentDataUrl={pendingImageDataUrl}
+              onAttachmentChange={setPendingImageDataUrl}
+            />
           </div>
-          <ChatMessages messages={messages} busy={transcriptBusy} />
-          <ChatInput
-            value={draft}
-            onChange={setDraft}
-            onSend={() => void sendMessage()}
-            disabled={transcriptBusy || !bootstrap.realtime.ok}
-          />
+          {openAiChatEnabled && openAiHydrated ? (
+            <EmployeeOpenAiSessionsSidebar
+              sessions={openAiSessionList}
+              activeSessionId={openAiActiveSessionId}
+              onSelect={selectSession}
+              onNew={newSession}
+              onRename={renameSession}
+              onDelete={deleteSession}
+            />
+          ) : null}
         </section>
       </div>
     </div>

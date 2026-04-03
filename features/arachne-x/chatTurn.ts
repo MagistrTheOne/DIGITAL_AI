@@ -3,7 +3,8 @@
  *
  * Для продукта с ARACHNE-X (линия B, MVP): основной канал чата — **WebSocket**
  * (`chat.send` / `chat.message.received`), см. `EmployeeInteractionPage` + `WebSocketTransport`.
- * **Не** подключать `POST /v1/chat` из UI, пока продукт явно не запросит второй канал.
+ * Текстовый чат в dashboard: при `OPENAI_API_KEY` UI ходит в **`POST /api/employees/chat`**
+ * (OpenAI Responses API на сервере). Локальная заглушка ниже — для офлайн-демо без ключа.
  */
 
 export type ArachneChatTurnInput = {

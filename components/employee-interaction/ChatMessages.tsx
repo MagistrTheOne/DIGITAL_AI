@@ -11,10 +11,13 @@ import { ThinkingTrace } from "@/components/employee-interaction/ThinkingTrace";
 export function ChatMessages({
   messages,
   busy,
+  hideEmptyPlaceholder,
 }: {
   messages: InteractionMessage[];
   /** Идёт запрос к оркестратору (ARACHNE-X). */
   busy?: boolean;
+  /** Не показывать подсказку «No messages yet…» (пустой чат до первого сообщения). */
+  hideEmptyPlaceholder?: boolean;
 }) {
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
@@ -26,9 +29,14 @@ export function ChatMessages({
     <ScrollArea className="min-h-[220px] flex-1 lg:min-h-0">
       <div className="flex flex-col gap-3 p-1 pr-3 pb-2">
         {messages.length === 0 ? (
-          <p className="py-8 text-center text-sm text-neutral-600">
-            No messages yet. Type below or use voice when wired.
-          </p>
+          hideEmptyPlaceholder ? (
+            <div className="min-h-[120px] shrink-0" aria-hidden />
+          ) : (
+            <p className="py-8 text-center text-sm text-neutral-600">
+              No messages yet. Type below, attach an image for vision, or use voice when
+              wired.
+            </p>
+          )
         ) : (
           messages.map((m) => (
             <div
@@ -50,7 +58,24 @@ export function ChatMessages({
                 )}
               >
                 <span className="sr-only">{m.role === "user" ? "You" : "AI"}</span>
-                <p className="whitespace-pre-wrap">{m.content}</p>
+                {m.role === "user" && m.imageUrls?.length ? (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {m.imageUrls.map((src, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={`${m.id}-img-${i}`}
+                        src={src}
+                        alt=""
+                        className="max-h-40 max-w-full rounded-md border border-neutral-400/40 object-contain"
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {m.content.trim() ? (
+                  <p className="whitespace-pre-wrap">{m.content}</p>
+                ) : m.role === "user" && m.imageUrls?.length ? (
+                  <p className="text-xs text-neutral-600">(image)</p>
+                ) : null}
                 {m.role === "assistant" && m.status === "streaming" ? (
                   <span className="mt-1 inline-block h-2 w-2 animate-pulse rounded-full bg-violet-400/80" />
                 ) : null}
@@ -59,9 +84,7 @@ export function ChatMessages({
           ))
         )}
         {busy ? (
-          <p className="text-center text-xs text-neutral-600">
-            ARACHNE-X orchestrator…
-          </p>
+          <p className="text-center text-xs text-neutral-600">Thinking…</p>
         ) : null}
         <div ref={bottomRef} aria-hidden className="h-px shrink-0" />
       </div>

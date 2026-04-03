@@ -95,6 +95,8 @@ export default async function EmployeeDetailPage({
     nullxesSessionId,
   });
 
+  const openAiChatEnabled = Boolean(process.env.OPENAI_API_KEY?.trim());
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <EmployeeInteractionPage
@@ -104,6 +106,7 @@ export default async function EmployeeDetailPage({
         displayName={employee.name}
         roleLabel={employee.roleCategory}
         anamPreviewEnabled={anamPreviewEnabled}
+        openAiChatEnabled={openAiChatEnabled}
       />
     </div>
   );
