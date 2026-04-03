@@ -4,10 +4,11 @@ import { PricingGrid } from "@/components/pricing/PricingGrid";
 
 export function PricingPage() {
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <AppHeader
+        compact
         title="Pricing"
-        subtitle="Scale your AI workforce — from startup to enterprise-grade infrastructure."
+        subtitle="Pick a plan that matches sessions, voice, and support — upgrade anytime."
       />
       <PricingGrid />
     </div>
