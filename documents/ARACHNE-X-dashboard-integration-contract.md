@@ -17,8 +17,9 @@
 
 | Что | Где |
 |-----|-----|
-| Mint server→server | [`features/arachine-x/server/arachneRealtimeMint.server.ts`](../features/arachine-x/server/arachneRealtimeMint.server.ts) — `POST {ARACHNE_HTTP_BASE}/v1/realtime/token`, заголовок `X-NULLXES-Realtime-Service-Key` при заданном `NULLXES_REALTIME_SERVICE_KEY` |
-| Bootstrap страницы сотрудника | [`getEmployeeSessionBootstrap`](../features/employees/service.server.ts): новый UUID `sessionId` на загрузку, опционально `nullxesSessionId` из query `?nullxesSessionId=` или `?nx=` |
+| Mint server→server | [`arachneRealtimeMint.server.ts`](../features/arachine-x/server/arachneRealtimeMint.server.ts) — `POST {ARACHNE_HTTP_BASE}/v1/realtime/token` (legacy); заголовок `X-NULLXES-Realtime-Service-Key` при заданном `NULLXES_REALTIME_SERVICE_KEY` |
+| Avatar bootstrap (рекомендуется) | [`arachneAvatarBootstrap.server.ts`](../features/arachine-x/server/arachneAvatarBootstrap.server.ts) — `POST {ARACHNE_HTTP_BASE}/v1/avatar/bootstrap` с тем же телом; при **404/405** автоматический fallback на `/v1/realtime/token`. `ARACHNE_SKIP_AVATAR_BOOTSTRAP=1` — только legacy mint. |
+| Bootstrap страницы сотрудника | [`getEmployeeSessionBootstrap`](../features/employees/service.server.ts): новый UUID `sessionId`, опционально `nullxesSessionId` из query; в DTO клиенту — `websocket` + `arachneAvatar` (preview URL, `pipelineMode`, `audioTransport`, …) **без** секретов |
 | BFF токена (сессия пользователя) | [`app/api/arachine-x/token/route.ts`](../app/api/arachine-x/token/route.ts) — `runtime: nodejs`, `POST` с телом `sessionId` / `employeeId?` / `nullxesSessionId?`; `GET` только в non-production |
 | WebSocket клиент | [`features/arachine-x/transport/WebSocketTransport.ts`](../features/arachine-x/transport/WebSocketTransport.ts) — `?token=` если не в URL; JSON кадры; закрытие `4401` / `1008` → `session.error` |
 | Чат в UI | [`EmployeeInteractionPage`](../components/employee-interaction/EmployeeInteractionPage.tsx) — `chat.send` / приём `chat.message.received`; **без** `POST /v1/chat` в MVP |

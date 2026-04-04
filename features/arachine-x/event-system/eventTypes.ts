@@ -29,6 +29,9 @@ export type ArachineXAvatarEvent =
       at: number;
       kind: "video" | "audio";
       seq: number;
+      /** Real stream: base64 JPEG payload (see ARACHNE_X_FRONTEND_CONTRACT §5–6). */
+      encoding?: "jpeg_base64";
+      data?: string;
     };
 
 export type ArachineXChatEvent = {

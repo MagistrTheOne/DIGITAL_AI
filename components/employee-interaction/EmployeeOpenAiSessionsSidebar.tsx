@@ -43,7 +43,7 @@ export function EmployeeOpenAiSessionsSidebar({
   };
 
   return (
-    <aside className="flex w-[min(100%,13.5rem)] shrink-0 flex-col border-l border-neutral-800 bg-neutral-950/50 lg:w-56">
+    <aside className="flex min-h-0 w-[min(100%,13.5rem)] shrink-0 flex-col border-l border-neutral-800 bg-neutral-950/50 lg:w-56">
       <div className="flex items-center justify-between gap-1 border-b border-neutral-800 px-2 py-2">
         <span className="truncate px-1 text-[10px] font-medium uppercase tracking-wider text-neutral-500">
           Chats
@@ -59,7 +59,7 @@ export function EmployeeOpenAiSessionsSidebar({
           <Plus className="size-4" />
         </Button>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <ul className="flex flex-col gap-0.5 p-1.5 pb-4">
           {sorted.map((s) => (
             <li key={s.id}>
@@ -100,9 +100,13 @@ export function EmployeeOpenAiSessionsSidebar({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="size-7 shrink-0 opacity-0 group-hover:opacity-100"
+                    title="Rename chat"
+                    className="size-7 shrink-0 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
                     aria-label="Rename chat"
-                    onClick={() => startRename(s)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startRename(s);
+                    }}
                   >
                     <Pencil className="size-3.5" />
                   </Button>
@@ -110,9 +114,11 @@ export function EmployeeOpenAiSessionsSidebar({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="size-7 shrink-0 text-neutral-500 opacity-0 group-hover:opacity-100 hover:text-red-400"
+                    title="Delete chat"
+                    className="size-7 shrink-0 text-neutral-500 hover:bg-red-950/50 hover:text-red-400"
                     aria-label="Delete chat"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (
                         typeof window !== "undefined" &&
                         !window.confirm("Delete this chat and its history?")

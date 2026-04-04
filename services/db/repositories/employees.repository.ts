@@ -134,6 +134,32 @@ export async function countEmployeesForUser(userId: string): Promise<number> {
   }
 }
 
+/** Merge `videoPreviewUrl` into employee `config` (e.g. after ARACHNE LongCat / media worker). */
+export async function updateEmployeeVideoPreviewUrl(
+  employeeId: EmployeeId,
+  userId: string,
+  videoPreviewUrl: string,
+): Promise<boolean> {
+  const row = await getEmployeeRowById(employeeId, userId);
+  if (!row) return false;
+
+  const prev = (row.config ?? {}) as EmployeeConfigJson;
+  const config: EmployeeConfigJson = {
+    ...prev,
+    videoPreviewUrl: videoPreviewUrl.trim(),
+  };
+
+  await db
+    .update(employee)
+    .set({
+      config: config as Record<string, unknown>,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(employee.id, employeeId), eq(employee.userId, userId)));
+
+  return true;
+}
+
 export async function insertEmployeeRow(input: {
   userId: string;
   name: string;

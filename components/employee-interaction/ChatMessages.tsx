@@ -2,11 +2,15 @@
 
 import * as React from "react";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 import type { InteractionMessage } from "@/components/employee-interaction/types";
 import { ThinkingTrace } from "@/components/employee-interaction/ThinkingTrace";
+
+function scrollElementToBottom(el: HTMLElement | null, behavior: ScrollBehavior) {
+  if (!el) return;
+  el.scrollTo({ top: el.scrollHeight, behavior });
+}
 
 export function ChatMessages({
   messages,
@@ -19,14 +23,27 @@ export function ChatMessages({
   /** Не показывать подсказку «No messages yet…» (пустой чат до первого сообщения). */
   hideEmptyPlaceholder?: boolean;
 }) {
-  const bottomRef = React.useRef<HTMLDivElement>(null);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  React.useLayoutEffect(() => {
+    const run = () =>
+      scrollElementToBottom(scrollRef.current, busy ? "auto" : "smooth");
+    run();
+    const id = requestAnimationFrame(() => requestAnimationFrame(run));
+    return () => cancelAnimationFrame(id);
   }, [messages, busy]);
 
   return (
-    <ScrollArea className="min-h-[220px] flex-1 lg:min-h-0">
+    <div
+      ref={scrollRef}
+      role="log"
+      aria-relevant="additions"
+      aria-label="Chat messages"
+      className={cn(
+        "min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain",
+        "[scrollbar-gutter:stable]",
+      )}
+    >
       <div className="flex flex-col gap-3 p-1 pr-3 pb-2">
         {messages.length === 0 ? (
           hideEmptyPlaceholder ? (
@@ -86,8 +103,8 @@ export function ChatMessages({
         {busy ? (
           <p className="text-center text-xs text-neutral-600">Thinking…</p>
         ) : null}
-        <div ref={bottomRef} aria-hidden className="h-px shrink-0" />
+        <div aria-hidden className="h-px shrink-0" />
       </div>
-    </ScrollArea>
+    </div>
   );
 }

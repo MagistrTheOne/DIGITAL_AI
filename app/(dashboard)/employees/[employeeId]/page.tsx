@@ -86,9 +86,12 @@ export default async function EmployeeDetailPage({
   const openAiChatEnabled = Boolean(process.env.OPENAI_API_KEY?.trim());
   const realtimeVoiceEnabled =
     openAiChatEnabled && isNullxesRealtimeVoiceEnvEnabled();
+  const avatarPreviewGenerateEnabled = Boolean(
+    process.env.ARACHNE_AVATAR_PREVIEW_URL?.trim(),
+  );
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-hidden p-6">
       <EmployeeInteractionPage
         key={`${employeeId}-${bootstrap.sessionId}`}
         bootstrap={bootstrap}
@@ -97,6 +100,7 @@ export default async function EmployeeDetailPage({
         roleLabel={employee.roleCategory}
         openAiChatEnabled={openAiChatEnabled}
         realtimeVoiceEnabled={realtimeVoiceEnabled}
+        avatarPreviewGenerateEnabled={avatarPreviewGenerateEnabled}
       />
     </div>
   );

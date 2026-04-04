@@ -46,6 +46,21 @@ export type EmployeeRealtimeBootstrap =
   | { ok: true; issuedAt: string; expiresAt: string }
   | { ok: false; error: string };
 
+/**
+ * Safe subset of POST /v1/avatar/bootstrap (or legacy mint with null extras).
+ * No service keys — server-only mint; browser gets this via RSC props only.
+ */
+export type EmployeeArachneAvatarBootstrapDTO = {
+  videoPreviewUrl: string | null;
+  avatarPreviewStatus: string | null;
+  pipelineMode: string | null;
+  arachneOutputProfile: string | null;
+  audioTransport: string | null;
+  avatarPreviewCached: boolean;
+  /** `bootstrap` = unified /v1/avatar/bootstrap; `legacy_mint` = /v1/realtime/token only. */
+  sessionSource: "bootstrap" | "legacy_mint";
+};
+
 export type EmployeeSessionBootstrapDTO = {
   /** UI session id (mint body); new UUID per page load. */
   sessionId: string;
@@ -56,5 +71,7 @@ export type EmployeeSessionBootstrapDTO = {
   };
   capabilities: EmployeeCapability[];
   realtime: EmployeeRealtimeBootstrap;
+  /** Set when realtime.ok; ARACHNE avatar bootstrap metadata for UI / video src. */
+  arachneAvatar: EmployeeArachneAvatarBootstrapDTO | null;
 };
 

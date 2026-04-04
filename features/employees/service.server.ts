@@ -14,7 +14,7 @@ import {
   insertEmployeeRow,
   listEmployeesByQuery,
 } from "@/services/db/repositories/employees.repository";
-import { mintArachneRealtimeToken } from "@/features/arachine-x/server/arachneRealtimeMint.server";
+import { mintArachneSessionForEmployee } from "@/features/arachine-x/server/arachneAvatarBootstrap.server";
 
 function toRoleCategory(role: string): EmployeeRoleCategory {
   switch (role) {
@@ -116,7 +116,7 @@ export async function getEmployeeSessionBootstrap(
     };
 
   const sessionId = crypto.randomUUID();
-  const mint = await mintArachneRealtimeToken({
+  const mint = await mintArachneSessionForEmployee({
     sessionId,
     employeeId,
     nullxesSessionId: options?.nullxesSessionId?.trim() || undefined,
@@ -129,6 +129,7 @@ export async function getEmployeeSessionBootstrap(
       websocket: { url: "", token: "" },
       capabilities: employee.capabilities,
       realtime: { ok: false, error: mint.error },
+      arachneAvatar: null,
     };
   }
 
@@ -144,6 +145,15 @@ export async function getEmployeeSessionBootstrap(
       ok: true,
       issuedAt: mint.issuedAt,
       expiresAt: mint.expiresAt,
+    },
+    arachneAvatar: {
+      videoPreviewUrl: mint.videoPreviewUrl,
+      avatarPreviewStatus: mint.avatarPreviewStatus,
+      pipelineMode: mint.pipelineMode,
+      arachneOutputProfile: mint.arachneOutputProfile,
+      audioTransport: mint.audioTransport,
+      avatarPreviewCached: mint.avatarPreviewCached,
+      sessionSource: mint.source,
     },
   };
 }

@@ -1,6 +1,12 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+import type { ArachineXEvent } from "@/features/arachine-x/event-system/eventTypes";
+import { useAvatarArachneVideoStream } from "@/features/arachine-x/client/useAvatarArachneVideoStream";
+import type { EmployeeVideoPreview } from "@/features/employees/types";
 
 function initials(name: string) {
   const p = name.trim().split(/\s+/).filter(Boolean);
@@ -9,28 +15,96 @@ function initials(name: string) {
 }
 
 /**
- * Placeholder for future video / streaming avatar.
- * Large rounded stage, centered character presence.
+ * Static preview (`videoPreviewUrl`), ARACHNE WebSocket JPEG stream (`avatar.stream.chunk`),
+ * or stub spinner when only seq/kind metadata arrives.
  */
-export function AvatarStage({ displayName }: { displayName: string }) {
+export function AvatarStage({
+  displayName,
+  videoPreview,
+  arachneStreamEnabled = false,
+  subscribeArachne,
+}: {
+  displayName: string;
+  videoPreview?: EmployeeVideoPreview;
+  /** When true and `subscribeArachne` is set, wire `avatar.*` WS events into the canvas layer. */
+  arachneStreamEnabled?: boolean;
+  subscribeArachne?: (cb: (ev: ArachineXEvent) => void) => () => void;
+}) {
   const letter = initials(displayName);
+  const src = videoPreview?.src?.trim();
+
+  const { canvasRef, containerRef, showStubOverlay, showLiveCanvas } =
+    useAvatarArachneVideoStream(subscribeArachne, arachneStreamEnabled);
+
+  const footerLabel = showLiveCanvas
+    ? "Live stream · ARACHNE-X (JPEG)"
+    : showStubOverlay
+      ? "Avatar stream · waiting for frames (stub)"
+      : src
+        ? "Preview clip · live stream when ARACHNE sends JPEG chunks"
+        : "Live avatar · connect ARACHNE WS";
 
   return (
     <div className="flex w-full max-w-md flex-col items-center">
       <div
-        className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border border-neutral-800 bg-gradient-to-br from-neutral-900 via-neutral-950 to-black shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
-        aria-label="Avatar stream placeholder"
+        className="relative aspect-4/3 w-full overflow-hidden rounded-3xl border border-neutral-800 bg-linear-to-br from-neutral-900 via-neutral-950 to-black shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+        aria-label={src ? "Avatar preview video" : "Avatar stream placeholder"}
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(120,120,120,0.12),transparent_55%)]" />
-        <div className="flex size-full items-center justify-center">
-          <Avatar className="size-32 border-2 border-neutral-700/80 shadow-lg">
-            <AvatarFallback className="bg-neutral-800 text-3xl font-medium text-neutral-200">
-              {letter}
-            </AvatarFallback>
-          </Avatar>
+
+        {/* Base: recorded preview or initials */}
+        <div
+          className={
+            showLiveCanvas ? "absolute inset-0 opacity-30" : "absolute inset-0"
+          }
+          aria-hidden={showLiveCanvas}
+        >
+          {src ? (
+            <video
+              className="absolute inset-0 size-full object-cover"
+              src={src}
+              controls={!showLiveCanvas}
+              playsInline
+              loop
+              muted
+              preload="metadata"
+            />
+          ) : (
+            <div className="flex size-full items-center justify-center">
+              <Avatar className="size-32 border-2 border-neutral-700/80 shadow-lg">
+                <AvatarFallback className="bg-neutral-800 text-3xl font-medium text-neutral-200">
+                  {letter}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          )}
         </div>
+
+        {/* JPEG stream layer */}
+        <div ref={containerRef} className="absolute inset-0">
+          <canvas
+            ref={canvasRef}
+            className={
+              showLiveCanvas
+                ? "absolute inset-0 size-full object-contain"
+                : "pointer-events-none absolute inset-0 size-full opacity-0"
+            }
+            aria-hidden={!showLiveCanvas}
+          />
+        </div>
+
+        {showStubOverlay ? (
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-neutral-950/50 backdrop-blur-[2px]"
+            aria-busy
+            aria-label="Avatar loading"
+          >
+            <Loader2 className="size-10 animate-spin text-neutral-400" />
+          </div>
+        ) : null}
+
         <div className="absolute inset-x-0 bottom-0 border-t border-neutral-800/80 bg-neutral-950/85 px-3 py-2 text-center text-[11px] font-medium uppercase tracking-wider text-neutral-500 backdrop-blur-sm">
-          Live avatar · video later
+          {footerLabel}
         </div>
       </div>
     </div>

@@ -11,8 +11,11 @@ import type {
   InteractionMessage,
   VoiceUiState,
 } from "@/components/employee-interaction/types";
+import { AvatarPreviewGenerateControl } from "@/components/employee-interaction/AvatarPreviewGenerateControl";
 import { VoiceControlButton } from "@/components/employee-interaction/VoiceControlButton";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Trash2 } from "lucide-react";
 import type { ArachineXEvent } from "@/features/arachine-x/event-system/eventTypes";
 import { useAvatarRuntime } from "@/features/arachine-x/client/useAvatarRuntime";
 import { EmployeeOpenAiSessionsSidebar } from "@/components/employee-interaction/EmployeeOpenAiSessionsSidebar";
@@ -43,6 +46,7 @@ export function EmployeeInteractionPage({
   employeeId,
   openAiChatEnabled,
   realtimeVoiceEnabled,
+  avatarPreviewGenerateEnabled = false,
 }: {
   bootstrap: EmployeeSessionBootstrapDTO;
   displayName: string;
@@ -52,6 +56,8 @@ export function EmployeeInteractionPage({
   openAiChatEnabled: boolean;
   /** Server: NULLXES_REALTIME_VOICE=1 + API key — push-to-talk uses Realtime (gpt-realtime-1.5 by default). */
   realtimeVoiceEnabled?: boolean;
+  /** Server: ARACHNE_AVATAR_PREVIEW_URL set — show “Generate preview” (LongCat / worker on ARACHNE). */
+  avatarPreviewGenerateEnabled?: boolean;
 }) {
   const avatarBootstrap = React.useMemo(() => toAvatarBootstrap(bootstrap), [bootstrap]);
 
@@ -95,6 +101,38 @@ export function EmployeeInteractionPage({
   const setTranscriptMessages = openAiChatEnabled
     ? setOpenAiMessages
     : setWsMessages;
+
+  const handleDeleteActiveChat = React.useCallback(() => {
+    const id = openAiActiveSessionId;
+    if (!id || !openAiHydrated) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Delete this chat and its history?")
+    ) {
+      return;
+    }
+    deleteSession(id);
+  }, [openAiActiveSessionId, openAiHydrated, deleteSession]);
+
+  const clearWsTranscript = React.useCallback(() => {
+    if (openAiChatEnabled) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Clear this transcript? Messages shown here will be removed.")
+    ) {
+      return;
+    }
+    setWsMessages([
+      {
+        id: newId(),
+        role: "assistant",
+        content:
+          "This transcript is a live record of your conversation with the AI employee. Messages sync over ARACHNE-X WebSocket when realtime is available.",
+        createdAt: Date.now(),
+        ephemeral: true,
+      },
+    ]);
+  }, [openAiChatEnabled]);
 
   const [draft, setDraft] = React.useState("");
   const [pendingImageDataUrl, setPendingImageDataUrl] = React.useState<
@@ -291,6 +329,20 @@ export function EmployeeInteractionPage({
   const voiceState = realtimeVoiceActive ? realtimeVoiceState : stubVoiceState;
   const onVoicePress = realtimeVoiceActive ? realtimeOnVoicePress : stubOnVoicePress;
 
+  const stageVideoPreview = React.useMemo(() => {
+    const fromArachne =
+      bootstrap.realtime.ok &&
+      bootstrap.arachneAvatar?.videoPreviewUrl?.trim();
+    if (fromArachne) {
+      return { src: fromArachne, type: "video/mp4" as const };
+    }
+    return bootstrap.employee.videoPreview;
+  }, [
+    bootstrap.realtime.ok,
+    bootstrap.arachneAvatar?.videoPreviewUrl,
+    bootstrap.employee.videoPreview,
+  ]);
+
   const realtimeError =
     !bootstrap.realtime.ok
       ? bootstrap.realtime.error
@@ -299,7 +351,7 @@ export function EmployeeInteractionPage({
         : null;
 
   return (
-    <div className="flex min-h-[calc(100dvh-6rem)] flex-col gap-0">
+    <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
       <EmployeeHeader
         displayName={displayName}
         roleLabel={roleLabel}
@@ -326,9 +378,20 @@ export function EmployeeInteractionPage({
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-6 pt-6 lg:flex-row lg:gap-0">
-        <section className="flex shrink-0 flex-col items-center gap-8 lg:w-[42%] lg:max-w-xl lg:justify-center lg:border-r lg:border-neutral-800 lg:pr-8 lg:pt-4">
-          <AvatarStage displayName={displayName} />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-hidden pt-6 lg:flex-row lg:gap-0">
+        <section className="flex shrink-0 flex-col items-center gap-8 lg:min-h-0 lg:w-[42%] lg:max-w-xl lg:justify-center lg:overflow-y-auto lg:border-r lg:border-neutral-800 lg:pr-8 lg:pt-4">
+          <AvatarStage
+            displayName={displayName}
+            videoPreview={stageVideoPreview}
+            arachneStreamEnabled={bootstrap.realtime.ok}
+            subscribeArachne={
+              bootstrap.realtime.ok ? subscribeEvents : undefined
+            }
+          />
+          <AvatarPreviewGenerateControl
+            employeeId={employeeId}
+            enabled={avatarPreviewGenerateEnabled}
+          />
           <VoiceControlButton
             state={voiceState}
             onPress={onVoicePress}
@@ -338,24 +401,70 @@ export function EmployeeInteractionPage({
 
         <Separator className="bg-neutral-800 lg:hidden" />
 
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-neutral-800/80 bg-neutral-950/40 lg:flex-row lg:border-0 lg:bg-transparent">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="border-b border-neutral-800 px-3 py-2 lg:border-neutral-800">
-              <h2 className="text-xs font-medium uppercase tracking-wider text-neutral-500">
-                Transcript
-              </h2>
-              <p className="text-[11px] text-neutral-600">
-                {openAiChatEnabled
-                  ? realtimeVoiceEnabled
-                    ? "NULLXES transcript · cloud · tools + vision ·  Realtime voice"
-                    : "NULLXES transcript · ARACHNE-X cloud · tools + vision (server)"
-                  : "ARACHNE-X · WebSocket (MVP)"}
-                {" · "}
-                phase{" "}
-                <span className="font-mono text-neutral-500">
-                  {avatarState.phase}
-                </span>
-              </p>
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-800/80 bg-neutral-950/40 lg:flex-row lg:border-0 lg:bg-transparent">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="flex shrink-0 items-start justify-between gap-2 border-b border-neutral-800 px-3 py-2 lg:border-neutral-800">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xs font-medium uppercase tracking-wider text-neutral-500">
+                  Transcript
+                </h2>
+                <p className="text-[11px] text-neutral-600">
+                  {openAiChatEnabled
+                    ? realtimeVoiceEnabled
+                      ? "NULLXES transcript · cloud · tools + vision ·  Realtime voice"
+                      : "NULLXES transcript · ARACHNE-X cloud · tools + vision (server)"
+                    : "ARACHNE-X · WebSocket (MVP)"}
+                  {" · "}
+                  phase{" "}
+                  <span className="font-mono text-neutral-500">
+                    {avatarState.phase}
+                  </span>
+                  {bootstrap.arachneAvatar?.pipelineMode ? (
+                    <>
+                      {" · "}
+                      <span className="font-mono text-neutral-500">
+                        {bootstrap.arachneAvatar.pipelineMode}
+                      </span>
+                    </>
+                  ) : null}
+                  {bootstrap.arachneAvatar?.audioTransport ? (
+                    <>
+                      {" · audio "}
+                      <span className="font-mono text-neutral-500">
+                        {bootstrap.arachneAvatar.audioTransport}
+                      </span>
+                    </>
+                  ) : null}
+                </p>
+              </div>
+              {openAiChatEnabled && openAiHydrated ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  title="Delete this chat"
+                  aria-label="Delete this chat"
+                  className="h-8 shrink-0 gap-1.5 border-neutral-700 bg-neutral-900/80 px-2 text-xs text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50"
+                  onClick={handleDeleteActiveChat}
+                  disabled={!openAiActiveSessionId}
+                >
+                  <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                  <span className="whitespace-nowrap">Delete</span>
+                </Button>
+              ) : !openAiChatEnabled ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  title="Clear transcript"
+                  aria-label="Clear transcript"
+                  className="h-8 shrink-0 gap-1.5 border-neutral-700 bg-neutral-900/80 px-2 text-xs text-neutral-200 hover:bg-neutral-800 hover:text-neutral-50"
+                  onClick={clearWsTranscript}
+                >
+                  <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                  <span className="whitespace-nowrap">Clear</span>
+                </Button>
+              ) : null}
             </div>
             <ChatMessages
               messages={messages}

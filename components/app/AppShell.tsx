@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 
 import {
   Sidebar,
@@ -17,6 +18,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarNav } from "@/components/app/SidebarNav";
 import { UserAccountButton } from "@/components/app/UserAccountButton";
 import type { AccountDashboardDTO } from "@/features/account/types";
+import { cn } from "@/lib/utils";
 
 export function AppShell({
   children,
@@ -25,10 +27,14 @@ export function AppShell({
   children: React.ReactNode;
   account: AccountDashboardDTO | null;
 }) {
+  const pathname = usePathname();
+  const employeeWorkspaceScrollLock =
+    pathname === "/employees" || pathname.startsWith("/employees/");
+
   return (
     <SidebarProvider defaultOpen>
       <TooltipProvider delayDuration={250}>
-        <div className="flex min-h-svh w-full bg-neutral-950 text-neutral-200">
+        <div className="flex h-full min-h-0 w-full bg-neutral-950 text-neutral-200">
           <Sidebar
             collapsible="icon"
             className="border-r border-neutral-800 bg-neutral-950"
@@ -66,16 +72,23 @@ export function AppShell({
             </SidebarFooter>
           </Sidebar>
 
-          <SidebarInset className="bg-neutral-950">
-            <div className="flex min-h-[60vh] flex-col">
-              <div className="flex items-center gap-3 border-b border-neutral-800 px-6 py-4">
-                <SidebarTrigger className="text-neutral-300" />
-                <div className="h-4 w-px bg-neutral-800" />
-                <div className="text-xs text-neutral-500">
-                  AI Workforce Platform
-                </div>
+          <SidebarInset className="min-h-0 flex-1 overflow-hidden bg-neutral-950">
+            <div className="flex shrink-0 items-center gap-3 border-b border-neutral-800 px-6 py-4">
+              <SidebarTrigger className="text-neutral-300" />
+              <div className="h-4 w-px bg-neutral-800" />
+              <div className="text-xs text-neutral-500">
+                AI Workforce Platform
               </div>
-              <div className="flex-1">{children}</div>
+            </div>
+            <div
+              className={cn(
+                "flex min-h-0 flex-1 flex-col",
+                employeeWorkspaceScrollLock
+                  ? "overflow-hidden"
+                  : "overflow-y-auto overflow-x-hidden",
+              )}
+            >
+              {children}
             </div>
           </SidebarInset>
 
