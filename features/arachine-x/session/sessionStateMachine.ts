@@ -4,6 +4,25 @@ import type {
   ArachineXSessionEvent,
 } from "@/features/arachine-x/event-system/eventTypes";
 
+const SESSION_ERROR_MESSAGES: Record<string, string> = {
+  infer_queue_full:
+    "Avatar queue is full — try again in a moment or reduce concurrent sessions.",
+  avatar_inference_failed: "Avatar video generation failed. You can keep chatting.",
+  avatar_inference_empty:
+    "Avatar produced no video output. You can keep chatting.",
+};
+
+export function formatSessionErrorMessage(event: {
+  message: string;
+  code?: string;
+}): string {
+  const code = event.code?.trim();
+  if (code && SESSION_ERROR_MESSAGES[code]) {
+    return SESSION_ERROR_MESSAGES[code];
+  }
+  return event.message;
+}
+
 export type ArachineXRuntimePhase =
   | "idle"
   | "connecting"
@@ -41,7 +60,11 @@ export function reduceArachineXRuntimeState(
     case "session.disconnected":
       return { ...state, phase: "idle" };
     case "session.error":
-      return { ...state, phase: "error", lastError: event.message };
+      return {
+        ...state,
+        phase: "error",
+        lastError: formatSessionErrorMessage(event),
+      };
     case "avatar.state.changed":
       return { ...state, avatarState: event.state };
     case "chat.message.received":

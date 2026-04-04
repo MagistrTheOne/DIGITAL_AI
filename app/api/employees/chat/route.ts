@@ -10,6 +10,7 @@ import {
   getEmployeeRowById,
   type EmployeeConfigJson,
 } from "@/services/db/repositories/employees.repository";
+import { recordChatTurnTelemetry } from "@/services/db/repositories/telemetry.repository";
 
 const MAX_MESSAGES = 40;
 const MAX_CONTENT_LEN = 12_000;
@@ -23,6 +24,8 @@ export async function POST(req: Request) {
 
   const body = (await req.json().catch(() => null)) as null | {
     employeeId?: string;
+    /** OpenAI transcript tab id (localStorage) — ties turns to one `ai_sessions` row. */
+    clientChatSessionId?: string;
     messages?: {
       role?: string;
       content?: string;
@@ -90,7 +93,10 @@ export async function POST(req: Request) {
     );
   }
 
+  const clientChatSessionId = body?.clientChatSessionId?.trim() ?? "";
   const cfg = (row.config ?? {}) as EmployeeConfigJson;
+
+  const started = Date.now();
   const result = await runEmployeeOpenAiChatTurn({
     name: row.name,
     role: row.role,
@@ -98,6 +104,33 @@ export async function POST(req: Request) {
     messages,
     userId,
   });
+  const latencyMs = Math.max(0, Date.now() - started);
+
+  if (clientChatSessionId) {
+    try {
+      if (result.ok) {
+        await recordChatTurnTelemetry({
+          userId,
+          employeeId,
+          clientSessionId: clientChatSessionId,
+          latencyMs,
+          tokensDelta: result.totalTokens ?? 0,
+          success: true,
+        });
+      } else {
+        await recordChatTurnTelemetry({
+          userId,
+          employeeId,
+          clientSessionId: clientChatSessionId,
+          latencyMs,
+          tokensDelta: 0,
+          success: false,
+        });
+      }
+    } catch {
+      /* telemetry must not break chat */
+    }
+  }
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });

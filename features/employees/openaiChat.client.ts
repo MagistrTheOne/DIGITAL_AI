@@ -8,13 +8,17 @@ export type OpenAiTranscriptMessage = {
 export async function postEmployeeOpenAiChat(input: {
   employeeId: string;
   messages: OpenAiTranscriptMessage[];
+  /** Binds turns to one `ai_sessions` row for analytics. */
+  clientChatSessionId?: string;
 }): Promise<{ content: string }> {
+  const trimmedSession = input.clientChatSessionId?.trim();
   const res = await fetch("/api/employees/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       employeeId: input.employeeId,
       messages: input.messages,
+      ...(trimmedSession ? { clientChatSessionId: trimmedSession } : {}),
     }),
   });
 

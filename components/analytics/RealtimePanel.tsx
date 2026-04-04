@@ -18,11 +18,12 @@ import { cn } from "@/lib/utils";
 export function RealtimePanel({
   realtime,
   speaking,
-  voiceLoadPct,
+  throughputLoadPct,
 }: {
   realtime: AnalyticsDashboardDTO["realtime"];
   speaking: { initials: string; name: string }[];
-  voiceLoadPct: number;
+  /** Visual load from event rate (not voice); see Live panel description. */
+  throughputLoadPct: number;
 }) {
   const metrics = [
     {
@@ -36,7 +37,7 @@ export function RealtimePanel({
       badge: "ok" as const,
     },
     {
-      label: "Stream health",
+      label: "Turn success (1h)",
       value: `${realtime.streamHealthPct.toFixed(1)}%`,
       badge: "ok" as const,
     },
@@ -55,7 +56,7 @@ export function RealtimePanel({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm text-neutral-100">Live operations</CardTitle>
         <CardDescription className="text-xs text-neutral-500">
-          Sessions, event rate, stream health.
+          Active transcript sessions (recent), usage event rate, last-hour turn success.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2.5">
@@ -111,13 +112,13 @@ export function RealtimePanel({
             </div>
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex justify-between text-[10px] text-neutral-500">
-                <span>Voice stream load</span>
+                <span>Throughput load</span>
                 <span className="tabular-nums text-neutral-400">
-                  {Math.round(voiceLoadPct)}%
+                  {Math.round(throughputLoadPct)}%
                 </span>
               </div>
               <Progress
-                value={Math.min(100, voiceLoadPct)}
+                value={Math.min(100, throughputLoadPct)}
                 className="h-1.5 bg-neutral-800 **:data-[slot=progress-indicator]:bg-emerald-500/70"
               />
             </div>

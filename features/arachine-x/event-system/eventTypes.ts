@@ -16,6 +16,11 @@ export type ArachineXSessionEvent =
       type: "session.error";
       at: number;
       message: string;
+      /**
+       * Stable machine code from ARACHNE-X / worker (avatar async infer, queue, etc.).
+       * UI may map this to friendlier copy; see documents/ARACHNE_ASYNC_INFERENCE.md.
+       */
+      code?: string;
     };
 
 export type ArachineXAvatarEvent =

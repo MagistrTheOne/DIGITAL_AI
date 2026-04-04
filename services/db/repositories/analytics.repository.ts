@@ -3,6 +3,13 @@
  */
 import { and, count, eq, gte, isNull, sql } from "drizzle-orm";
 
+/** Open `ai_sessions` rows without `ended_at` older than this are not counted as active. */
+const ACTIVE_SESSION_TTL_MS = 15 * 60 * 1000;
+
+function activeSessionSince(): Date {
+  return new Date(Date.now() - ACTIVE_SESSION_TTL_MS);
+}
+
 import { db } from "@/db";
 import { aiSession, usageEvent } from "@/db/schema";
 import { listEmployeesByQuery } from "@/services/db/repositories/employees.repository";
@@ -130,6 +137,7 @@ export async function getEmployeePerformance(
         and(
           eq(aiSession.userId, userId),
           isNull(aiSession.endedAt),
+          gte(aiSession.updatedAt, activeSessionSince()),
         ),
       );
     const activeSet = new Set(open.map((o) => o.employeeId));
@@ -185,7 +193,13 @@ export async function getRealtimeStats(userId: string): Promise<RealtimeStatsRec
     const [activeRow] = await db
       .select({ c: count() })
       .from(aiSession)
-      .where(and(eq(aiSession.userId, userId), isNull(aiSession.endedAt)));
+      .where(
+        and(
+          eq(aiSession.userId, userId),
+          isNull(aiSession.endedAt),
+          gte(aiSession.updatedAt, activeSessionSince()),
+        ),
+      );
     const activeSessions = Number(activeRow?.c ?? 0);
 
     const since60 = rolling60sStart();

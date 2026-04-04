@@ -2,7 +2,7 @@ import { AppHeader } from "@/components/app/AppHeader";
 import { BusinessImpactCard } from "@/components/analytics/BusinessImpactCard";
 import { EmployeePerformanceList } from "@/components/analytics/EmployeePerformanceList";
 import { MetricsCards } from "@/components/analytics/MetricsCards";
-import { RealtimePanel } from "@/components/analytics/RealtimePanel";
+import { RealtimePanelLive } from "@/components/analytics/RealtimePanelLive";
 import { TimelineMini } from "@/components/analytics/TimelineMini";
 import { UsagePanel } from "@/components/analytics/UsagePanel";
 import { WorkforceLevelCard } from "@/components/analytics/WorkforceLevelCard";
@@ -73,11 +73,7 @@ export function AnalyticsPage({
           <BusinessImpactCard businessImpact={data.businessImpact} />
         </div>
         <div className="lg:col-span-3">
-          <RealtimePanel
-            realtime={data.realtime}
-            speaking={speaking}
-            voiceLoadPct={Math.min(100, Math.round(data.realtime.streamHealthPct))}
-          />
+          <RealtimePanelLive initial={data.realtime} speaking={speaking} />
         </div>
       </div>
 

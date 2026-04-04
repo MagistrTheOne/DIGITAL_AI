@@ -28,12 +28,32 @@ function webSearchEnabled(): boolean {
   return process.env.OPENAI_CHAT_WEB_SEARCH === "1";
 }
 
-function parseReasoning():
-  | { effort: "low" | "medium" | "high" }
+function parseReasoningEffortFromEnv():
+  | "low"
+  | "medium"
+  | "high"
   | undefined {
   const r = process.env.OPENAI_CHAT_REASONING?.trim().toLowerCase();
-  if (r === "low" || r === "medium" || r === "high") return { effort: r };
+  if (r === "low" || r === "medium" || r === "high") return r;
   return undefined;
+}
+
+/** `reasoning.effort` is only valid on certain Responses API models (not gpt-4o-mini / gpt-4.1, etc.). */
+function modelSupportsReasoningEffort(model: string): boolean {
+  const m = model.trim().toLowerCase();
+  if (m.includes("gpt-5")) return true;
+  if (/^o[1-9]/.test(m)) return true;
+  if (m.startsWith("o1") || m.startsWith("o3") || m.startsWith("o4")) return true;
+  return false;
+}
+
+function reasoningForModel(
+  model: string,
+): { effort: "low" | "medium" | "high" } | undefined {
+  const effort = parseReasoningEffortFromEnv();
+  if (!effort) return undefined;
+  if (!modelSupportsReasoningEffort(model)) return undefined;
+  return { effort };
 }
 
 function parseShellSkillReferences(): SkillReference[] | null {
@@ -353,7 +373,7 @@ export type EmployeeChatTurnInput = {
 };
 
 export type EmployeeChatTurnResult =
-  | { ok: true; content: string; model: string }
+  | { ok: true; content: string; model: string; totalTokens?: number }
   | { ok: false; status: number; error: string };
 
 export async function runEmployeeOpenAiChatTurn(
@@ -372,7 +392,7 @@ export async function runEmployeeOpenAiChatTurn(
   const model = getChatModel();
   const instructions = buildInstructions(input.name, input.role, input.config);
   const tools = buildAgentTools();
-  const reasoning = parseReasoning();
+  const reasoning = reasoningForModel(model);
   const vectorStoreIds = parseVectorStoreIds();
   const responseInclude = buildResponseInclude(vectorStoreIds);
 
@@ -384,6 +404,7 @@ export async function runEmployeeOpenAiChatTurn(
 
   let previousResponseId: string | null = null;
   let followUpInput: ResponseInputItem[] | null = null;
+  let totalTokensAcc = 0;
 
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -412,6 +433,11 @@ export async function runEmployeeOpenAiChatTurn(
         body,
       )) as OpenAiResponse;
 
+      const roundUsage = response.usage?.total_tokens;
+      if (typeof roundUsage === "number" && Number.isFinite(roundUsage)) {
+        totalTokensAcc += roundUsage;
+      }
+
       if (response.error) {
         return {
           ok: false,
@@ -437,7 +463,12 @@ export async function runEmployeeOpenAiChatTurn(
             error: "Empty model output.",
           };
         }
-        return { ok: true, content, model };
+        return {
+          ok: true,
+          content,
+          model,
+          ...(totalTokensAcc > 0 ? { totalTokens: totalTokensAcc } : {}),
+        };
       }
 
       const outputs: ResponseInputItem[] = [];

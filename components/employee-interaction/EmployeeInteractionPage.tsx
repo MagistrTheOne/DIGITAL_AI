@@ -19,6 +19,7 @@ import { Trash2 } from "lucide-react";
 import type { ArachineXEvent } from "@/features/arachine-x/event-system/eventTypes";
 import { useAvatarRuntime } from "@/features/arachine-x/client/useAvatarRuntime";
 import { EmployeeOpenAiSessionsSidebar } from "@/components/employee-interaction/EmployeeOpenAiSessionsSidebar";
+import { postEndAiWorkspaceSession } from "@/features/employees/analyticsSession.client";
 import { postEmployeeOpenAiChat } from "@/features/employees/openaiChat.client";
 import { useEmployeeOpenAiSessions } from "@/features/employees/useEmployeeOpenAiSessions";
 import { useEmployeeRealtimeVoice } from "@/features/employees/useEmployeeRealtimeVoice";
@@ -90,12 +91,37 @@ export function EmployeeInteractionPage({
     activeSessionId: openAiActiveSessionId,
     messages: openAiMessages,
     setMessages: setOpenAiMessages,
-    selectSession,
-    newSession,
+    selectSession: selectSessionInner,
+    newSession: newSessionInner,
     renameSession,
-    deleteSession,
+    deleteSession: deleteSessionInner,
     maybeAutonameFromUserText,
   } = useEmployeeOpenAiSessions(employeeId, openAiChatEnabled);
+
+  const selectSession = React.useCallback(
+    (id: string) => {
+      if (openAiActiveSessionId && openAiActiveSessionId !== id) {
+        postEndAiWorkspaceSession(openAiActiveSessionId);
+      }
+      selectSessionInner(id);
+    },
+    [openAiActiveSessionId, selectSessionInner],
+  );
+
+  const newSession = React.useCallback(() => {
+    if (openAiActiveSessionId) {
+      postEndAiWorkspaceSession(openAiActiveSessionId);
+    }
+    newSessionInner();
+  }, [openAiActiveSessionId, newSessionInner]);
+
+  const deleteSession = React.useCallback(
+    (id: string) => {
+      postEndAiWorkspaceSession(id);
+      deleteSessionInner(id);
+    },
+    [deleteSessionInner],
+  );
 
   const messages = openAiChatEnabled ? openAiMessages : wsMessages;
   const setTranscriptMessages = openAiChatEnabled
@@ -263,6 +289,7 @@ export function EmployeeInteractionPage({
         const { content } = await postEmployeeOpenAiChat({
           employeeId,
           messages: transcript,
+          clientChatSessionId: openAiActiveSessionId ?? undefined,
         });
         setTranscriptMessages((prev) => [
           ...prev,
@@ -304,6 +331,7 @@ export function EmployeeInteractionPage({
     draft,
     employeeId,
     maybeAutonameFromUserText,
+    openAiActiveSessionId,
     openAiChatEnabled,
     pendingImageDataUrl,
     sendChat,
