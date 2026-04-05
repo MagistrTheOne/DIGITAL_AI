@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { EmployeeWorkspaceIntegrations } from "@/components/employees/EmployeeWorkspaceIntegrations";
 import { EmployeeInteractionPage } from "@/components/employee-interaction/EmployeeInteractionPage";
 import {
   getEmployeeForDashboard,
@@ -91,7 +92,7 @@ export default async function EmployeeDetailPage({
   );
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-hidden p-6">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-y-auto overflow-x-hidden p-6">
       <EmployeeInteractionPage
         key={`${employeeId}-${bootstrap.sessionId}`}
         bootstrap={bootstrap}
@@ -102,6 +103,7 @@ export default async function EmployeeDetailPage({
         realtimeVoiceEnabled={realtimeVoiceEnabled}
         avatarPreviewGenerateEnabled={avatarPreviewGenerateEnabled}
       />
+      <EmployeeWorkspaceIntegrations employeeId={employeeId} />
     </div>
   );
 }

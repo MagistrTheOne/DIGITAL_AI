@@ -7,6 +7,7 @@ import { relations, sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  customType,
   date,
   index,
   integer,
@@ -16,6 +17,16 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+
+/** pgvector column; `toDriver` serializes for PostgreSQL `vector(1536)`. */
+const vector1536 = customType<{ data: number[] }>({
+  dataType() {
+    return "vector(1536)";
+  },
+  toDriver(value: number[]) {
+    return JSON.stringify(value);
+  },
+});
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -249,6 +260,98 @@ export const employee = pgTable(
   (table) => [index("employees_user_idx").on(table.userId)],
 );
 
+/**
+ * Per-employee integrations (e.g. client HTTP API with stored secret).
+ * `config` holds non-secret JSON; `secret_ciphertext` is app-encrypted.
+ */
+export const employeeIntegration = pgTable(
+  "employee_integration",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    employeeId: text("employee_id")
+      .notNull()
+      .references(() => employee.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull().default("client_api"),
+    name: text("name").notNull(),
+    config: jsonb("config")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    secretCiphertext: text("secret_ciphertext").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("employee_integration_user_employee_idx").on(
+      table.userId,
+      table.employeeId,
+    ),
+  ],
+);
+
+/** Uploaded knowledge source per employee (chunks + embeddings live in `knowledge_chunk`). */
+export const knowledgeDocument = pgTable(
+  "knowledge_document",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    employeeId: text("employee_id")
+      .notNull()
+      .references(() => employee.id, { onDelete: "cascade" }),
+    sourceLabel: text("source_label").notNull(),
+    mime: text("mime").notNull().default("text/plain"),
+    byteLength: integer("byte_length").notNull().default(0),
+    chunkCount: integer("chunk_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("knowledge_document_user_employee_idx").on(
+      table.userId,
+      table.employeeId,
+    ),
+  ],
+);
+
+export const knowledgeChunk = pgTable(
+  "knowledge_chunk",
+  {
+    id: text("id").primaryKey(),
+    documentId: text("document_id")
+      .notNull()
+      .references(() => knowledgeDocument.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    employeeId: text("employee_id")
+      .notNull()
+      .references(() => employee.id, { onDelete: "cascade" }),
+    chunkIndex: integer("chunk_index").notNull(),
+    content: text("content").notNull(),
+    metadata: jsonb("metadata")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    embedding: vector1536("embedding").notNull(),
+  },
+  (table) => [
+    index("knowledge_chunk_user_employee_idx").on(
+      table.userId,
+      table.employeeId,
+    ),
+  ],
+);
+
 /** Per-user AI runtime preferences (Settings UI + workers). */
 export const userSettings = pgTable("user_settings", {
   userId: text("user_id")
@@ -298,6 +401,9 @@ export const userRelations = relations(user, ({ many, one }) => ({
   usageEvents: many(usageEvent),
   aiMetricsDaily: many(aiMetricsDaily),
   employees: many(employee),
+  employeeIntegrations: many(employeeIntegration),
+  knowledgeDocuments: many(knowledgeDocument),
+  knowledgeChunks: many(knowledgeChunk),
   userSettings: one(userSettings, {
     fields: [user.id],
     references: [userSettings.userId],
@@ -356,10 +462,56 @@ export const aiMetricsDailyRelations = relations(aiMetricsDaily, ({ one }) => ({
   }),
 }));
 
-export const employeeRelations = relations(employee, ({ one }) => ({
+export const employeeRelations = relations(employee, ({ one, many }) => ({
   user: one(user, {
     fields: [employee.userId],
     references: [user.id],
+  }),
+  integrations: many(employeeIntegration),
+  knowledgeDocuments: many(knowledgeDocument),
+}));
+
+export const employeeIntegrationRelations = relations(
+  employeeIntegration,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [employeeIntegration.userId],
+      references: [user.id],
+    }),
+    employee: one(employee, {
+      fields: [employeeIntegration.employeeId],
+      references: [employee.id],
+    }),
+  }),
+);
+
+export const knowledgeDocumentRelations = relations(
+  knowledgeDocument,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [knowledgeDocument.userId],
+      references: [user.id],
+    }),
+    employee: one(employee, {
+      fields: [knowledgeDocument.employeeId],
+      references: [employee.id],
+    }),
+    chunks: many(knowledgeChunk),
+  }),
+);
+
+export const knowledgeChunkRelations = relations(knowledgeChunk, ({ one }) => ({
+  user: one(user, {
+    fields: [knowledgeChunk.userId],
+    references: [user.id],
+  }),
+  employee: one(employee, {
+    fields: [knowledgeChunk.employeeId],
+    references: [employee.id],
+  }),
+  document: one(knowledgeDocument, {
+    fields: [knowledgeChunk.documentId],
+    references: [knowledgeDocument.id],
   }),
 }));
 

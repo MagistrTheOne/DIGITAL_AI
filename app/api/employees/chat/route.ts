@@ -109,6 +109,7 @@ export async function POST(req: Request) {
     config: cfg,
     messages,
     userId,
+    employeeId,
   });
   const latencyMs = Math.max(0, Date.now() - started);
 
