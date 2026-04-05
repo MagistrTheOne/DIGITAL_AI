@@ -169,14 +169,7 @@ export function AccountSection() {
               <p className="max-w-56 text-center text-xs text-red-400 sm:text-left">
                 {error}
               </p>
-            ) : (
-              <p className="max-w-56 text-center text-xs text-neutral-600 sm:text-left">
-                JPEG, PNG, or WebP · max 2MB · resized to 512px before upload. Production:
-                set <code className="text-neutral-400">BLOB_READ_WRITE_TOKEN</code> for
-                Vercel Blob; local dev saves to{" "}
-                <code className="text-neutral-400">/public/avatars</code> without it.
-              </p>
-            )}
+            ) : null}
           </div>
 
           <div className="min-w-0 flex-1 space-y-6">
