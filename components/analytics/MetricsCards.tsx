@@ -14,42 +14,66 @@ function formatCostUsd(n: number): string {
   return `$${n.toFixed(0)}`;
 }
 
-function buildMetrics(kpis: AnalyticsDashboardDTO["kpis"]) {
-  const baselineMs = 1200;
-  const deltaMs = kpis.avgLatencyMs - baselineMs;
-  const latencyTrendDir = deltaMs <= 0 ? ("down" as const) : ("up" as const);
-  const latencyTrendText =
-    deltaMs === 0
-      ? "0ms"
-      : `${deltaMs < 0 ? "−" : "+"}${Math.abs(deltaMs)}ms`;
+type TrendSpec = { dir: "up" | "down"; text: string };
 
+function pctVsPrior30d(delta: number | null): TrendSpec | null {
+  if (delta === null) return null;
+  const good = delta >= 0;
+  return {
+    dir: good ? ("up" as const) : ("down" as const),
+    text: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}% vs prior 30d`,
+  };
+}
+
+function latencyVsPrior(deltaMs: number | null): TrendSpec | null {
+  if (deltaMs === null) return null;
+  const faster = deltaMs <= 0;
+  return {
+    dir: faster ? ("down" as const) : ("up" as const),
+    text:
+      deltaMs === 0
+        ? "0ms vs prior 30d"
+        : `${deltaMs < 0 ? "−" : "+"}${Math.abs(deltaMs)}ms vs prior 30d`,
+  };
+}
+
+function efficiencyPtsVsPrior(pts: number | null): TrendSpec | null {
+  if (pts === null) return null;
+  return {
+    dir: pts >= 0 ? ("up" as const) : ("down" as const),
+    text: `${pts >= 0 ? "+" : ""}${pts.toFixed(1)} pts vs prior 30d`,
+  };
+}
+
+function buildMetrics(kpis: AnalyticsDashboardDTO["kpis"]) {
   return [
     {
       title: "Cost saved",
       value: formatCostUsd(kpis.costSavedUsd),
-      description: "Vs. equivalent human labor (est.)",
-      trend: { dir: "up" as const, text: `+${kpis.efficiencyGainPct.toFixed(1)}%` },
+      description: "Estimated from telemetry (see env formula)",
+      trend: pctVsPrior30d(kpis.costSavedTrendPct),
       period: "Last 30d",
     },
     {
       title: "Sessions handled",
       value: kpis.sessionsHandled.toLocaleString(),
-      description: "Rolling window",
-      trend: { dir: "up" as const, text: `SR ${kpis.successRatePct.toFixed(1)}%` },
+      description: "Chat turns recorded in rolling window",
+      trend: pctVsPrior30d(kpis.sessionsTrendPct),
       period: "Last 30d",
     },
     {
       title: "Avg response time",
       value: `${(kpis.avgLatencyMs / 1000).toFixed(1)}s`,
-      description: "P50 across workforce",
-      trend: { dir: latencyTrendDir, text: latencyTrendText },
+      description: "Mean latency across recorded turns",
+      trend: latencyVsPrior(kpis.latencyTrendMs),
+      footnote: `Success rate ${kpis.successRatePct.toFixed(1)}% (finished turns)`,
       period: "Last 30d",
     },
     {
       title: "Efficiency gain",
       value: `+${kpis.efficiencyGainPct.toFixed(1)}%`,
-      description: "Vs. baseline workflow",
-      trend: { dir: "up" as const, text: `+${kpis.efficiencyGainPct.toFixed(1)}pts` },
+      description: "Success rate vs 85% baseline (heuristic)",
+      trend: efficiencyPtsVsPrior(kpis.efficiencyTrendPts),
       period: "Last 30d",
     },
   ];
@@ -71,6 +95,17 @@ function Trend({ dir, text }: { dir: "up" | "down"; text: string }) {
   );
 }
 
+function TrendRow({ trend }: { trend: TrendSpec | null }) {
+  if (!trend) {
+    return (
+      <span className="text-xs tabular-nums text-neutral-600">
+        — vs prior 30d
+      </span>
+    );
+  }
+  return <Trend dir={trend.dir} text={trend.text} />;
+}
+
 export function MetricsCards({ kpis }: { kpis: AnalyticsDashboardDTO["kpis"] }) {
   const metrics = buildMetrics(kpis);
 
@@ -88,9 +123,12 @@ export function MetricsCards({ kpis }: { kpis: AnalyticsDashboardDTO["kpis"] }) 
               <div className="text-xl font-semibold tabular-nums tracking-tight text-neutral-100">
                 {m.value}
               </div>
-              <Trend dir={m.trend.dir} text={m.trend.text} />
+              <TrendRow trend={m.trend} />
             </div>
             <p className="mt-0.5 text-[11px] text-neutral-500">{m.description}</p>
+            {"footnote" in m && m.footnote ? (
+              <p className="mt-0.5 text-[10px] text-neutral-600">{m.footnote}</p>
+            ) : null}
             <p className="mt-1.5 text-[10px] uppercase tracking-wide text-neutral-600">
               {m.period}
             </p>

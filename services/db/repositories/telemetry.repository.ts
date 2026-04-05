@@ -3,11 +3,14 @@
  */
 import { and, eq, sql } from "drizzle-orm";
 
+import { computeCostSavedCentsForTurn } from "@/lib/analytics/cost-saved.server";
 import { db } from "@/db";
 import { aiSession, usageEvent } from "@/db/schema";
 
 export const USAGE_EVENT_CHAT_TURN = "openai.chat.turn";
 export const USAGE_EVENT_CHAT_ERROR = "openai.chat.error";
+export const USAGE_EVENT_ARACHNE_CHAT_TURN = "arachne.chat.turn";
+export const USAGE_EVENT_ARACHNE_CHAT_ERROR = "arachne.chat.error";
 
 function newEventId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -23,6 +26,8 @@ export type RecordChatTurnTelemetryInput = {
   latencyMs: number;
   tokensDelta: number;
   success: boolean;
+  /** Default `openai` — ARACHNE WebSocket turns use `arachne` for `usage_events` typing. */
+  channel?: "openai" | "arachne";
 };
 
 /**
@@ -38,13 +43,21 @@ export async function recordChatTurnTelemetry(
     latencyMs,
     tokensDelta,
     success,
+    channel = "openai",
   } = input;
 
-  const eventType = success ? USAGE_EVENT_CHAT_TURN : USAGE_EVENT_CHAT_ERROR;
+  const eventType = success
+    ? channel === "arachne"
+      ? USAGE_EVENT_ARACHNE_CHAT_TURN
+      : USAGE_EVENT_CHAT_TURN
+    : channel === "arachne"
+      ? USAGE_EVENT_ARACHNE_CHAT_ERROR
+      : USAGE_EVENT_CHAT_ERROR;
   const quantity = success ? Math.max(1, tokensDelta) : 1;
 
   const now = new Date();
   const tokensAdd = success ? Math.max(0, tokensDelta) : 0;
+  const costDelta = computeCostSavedCentsForTurn({ success, tokensDelta });
 
   await db
     .insert(aiSession)
@@ -57,7 +70,7 @@ export async function recordChatTurnTelemetry(
       latencyMs,
       success,
       tokensUsed: tokensAdd,
-      costSavedCents: 0,
+      costSavedCents: costDelta,
       createdAt: now,
       updatedAt: now,
     })
@@ -67,6 +80,7 @@ export async function recordChatTurnTelemetry(
         latencyMs,
         success,
         tokensUsed: sql`${aiSession.tokensUsed} + ${tokensAdd}`,
+        costSavedCents: sql`${aiSession.costSavedCents} + ${costDelta}`,
         updatedAt: now,
       },
     });

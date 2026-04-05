@@ -14,6 +14,10 @@ export type AnalyticsDashboardDTO = {
     avgLatencyMs: number;
     successRatePct: number;
     efficiencyGainPct: number;
+    costSavedTrendPct: number | null;
+    sessionsTrendPct: number | null;
+    latencyTrendMs: number | null;
+    efficiencyTrendPts: number | null;
   };
   workforceLevel: {
     level: number;
@@ -36,7 +40,7 @@ export type AnalyticsDashboardDTO = {
   realtime: {
     activeSessions: number;
     eventsPerSecond: number;
-    streamHealthPct: number;
+    streamHealthPct: number | null;
   };
   timeline: Array<{
     hourIndex: number;

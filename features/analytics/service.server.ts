@@ -74,6 +74,10 @@ export async function getAnalyticsDashboardDTO(): Promise<AnalyticsDashboardDTO 
     avgLatencyMs: kpisRaw.avgLatencyMs,
     successRatePct: kpisRaw.successRatePct,
     efficiencyGainPct: kpisRaw.efficiencyGainPct,
+    costSavedTrendPct: kpisRaw.costSavedTrendPct,
+    sessionsTrendPct: kpisRaw.sessionsTrendPct,
+    latencyTrendMs: kpisRaw.latencyTrendMs,
+    efficiencyTrendPts: kpisRaw.efficiencyTrendPts,
   };
 
   const workforceLevel = computeWorkforceLevel(kpis.sessionsHandled);

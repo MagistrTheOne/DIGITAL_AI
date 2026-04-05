@@ -19,6 +19,7 @@ import { Trash2 } from "lucide-react";
 import type { ArachineXEvent } from "@/features/arachine-x/event-system/eventTypes";
 import { useAvatarRuntime } from "@/features/arachine-x/client/useAvatarRuntime";
 import { EmployeeOpenAiSessionsSidebar } from "@/components/employee-interaction/EmployeeOpenAiSessionsSidebar";
+import { postArachneChatTurnTelemetry } from "@/features/employees/arachneTelemetry.client";
 import { postEndAiWorkspaceSession } from "@/features/employees/analyticsSession.client";
 import { postEmployeeOpenAiChat } from "@/features/employees/openaiChat.client";
 import { useEmployeeOpenAiSessions } from "@/features/employees/useEmployeeOpenAiSessions";
@@ -210,6 +211,8 @@ export function EmployeeInteractionPage({
   const processingTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  /** Start timestamps for ARACHNE user sends; paired with assistant replies / session errors. */
+  const pendingWsTurnStartsRef = React.useRef<number[]>([]);
 
   React.useEffect(() => {
     return () => {
@@ -227,12 +230,40 @@ export function EmployeeInteractionPage({
 
   React.useEffect(() => {
     if (!bootstrap.realtime.ok) return;
+    const clientSessionId = `nx_ws_${bootstrap.sessionId}`;
     return subscribeEvents((ev: ArachineXEvent) => {
+      if (openAiChatEnabled) return;
+
+      if (ev.type === "session.error") {
+        const startedAt = pendingWsTurnStartsRef.current.shift();
+        if (startedAt === undefined) return;
+        const latencyMs = Math.max(0, Date.now() - startedAt);
+        void postArachneChatTurnTelemetry({
+          employeeId,
+          clientSessionId,
+          latencyMs,
+          success: false,
+          tokensDelta: 0,
+        });
+        return;
+      }
+
       if (ev.type !== "chat.message.received") return;
       if (ev.message.from !== "assistant") return;
-      if (openAiChatEnabled) return;
+
       setWsMessages((prev) => {
         if (prev.some((m) => m.id === ev.message.id)) return prev;
+        const startedAt = pendingWsTurnStartsRef.current.shift();
+        if (startedAt !== undefined) {
+          const latencyMs = Math.max(0, Date.now() - startedAt);
+          void postArachneChatTurnTelemetry({
+            employeeId,
+            clientSessionId,
+            latencyMs,
+            success: true,
+            tokensDelta: 0,
+          });
+        }
         return [
           ...prev,
           {
@@ -248,6 +279,7 @@ export function EmployeeInteractionPage({
   }, [
     bootstrap.realtime.ok,
     bootstrap.sessionId,
+    employeeId,
     openAiChatEnabled,
     subscribeEvents,
   ]);
@@ -326,6 +358,7 @@ export function EmployeeInteractionPage({
     }
 
     setTranscriptMessages((prev) => [...prev, userMsg]);
+    pendingWsTurnStartsRef.current.push(Date.now());
     setTranscriptBusy(true);
     try {
       sendChat(text);

@@ -1,7 +1,7 @@
 /**
  * Analytics aggregates — telemetry from `ai_sessions` + `usage_events`.
  */
-import { and, count, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, count, eq, gte, isNull, lt, sql } from "drizzle-orm";
 
 /** Open `ai_sessions` rows without `ended_at` older than this are not counted as active. */
 const ACTIVE_SESSION_TTL_MS = 15 * 60 * 1000;
@@ -23,6 +23,10 @@ function rolling30dStart(): Date {
   return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 }
 
+function rolling60dStart(): Date {
+  return new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+}
+
 function rolling24hStart(): Date {
   return new Date(Date.now() - 24 * 60 * 60 * 1000);
 }
@@ -41,6 +45,13 @@ export type KpiMetricsRecord = {
   successRatePct: number;
   costSavedUsd: number;
   efficiencyGainPct: number;
+  /** % change vs prior 30d; null when prior window has no comparable baseline. */
+  costSavedTrendPct: number | null;
+  sessionsTrendPct: number | null;
+  /** Current avg latency minus prior-30d avg; null when either window has no sessions. */
+  latencyTrendMs: number | null;
+  /** Efficiency (success vs baseline) change vs prior 30d, percentage points. */
+  efficiencyTrendPts: number | null;
 };
 
 export type EmployeePerformanceRecord = {
@@ -55,7 +66,8 @@ export type EmployeePerformanceRecord = {
 export type RealtimeStatsRecord = {
   activeSessions: number;
   eventsPerSecond: number;
-  streamHealthPct: number;
+  /** Last-hour turn success rate; null when no turns in that window. */
+  streamHealthPct: number | null;
 };
 
 export type TimelineHourRecord = {
@@ -63,42 +75,94 @@ export type TimelineHourRecord = {
   sessionsCount: number;
 };
 
+function efficiencyFromSuccessRate(successRatePct: number): number {
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round((successRatePct - BASELINE_SUCCESS_PCT) * 10) / 10,
+    ),
+  );
+}
+
+function pctDelta(curr: number, prev: number): number | null {
+  if (prev <= 0) return null;
+  return Math.round(((curr - prev) / prev) * 1000) / 10;
+}
+
+async function aggregateKpiWindow(
+  userId: string,
+  sinceInclusive: Date,
+  untilExclusive?: Date,
+): Promise<{
+  sessionsHandled: number;
+  avgLatencyMs: number;
+  successRatePct: number;
+  costSavedUsd: number;
+}> {
+  const conds = [
+    eq(aiSession.userId, userId),
+    gte(aiSession.startedAt, sinceInclusive),
+  ];
+  if (untilExclusive) {
+    conds.push(lt(aiSession.startedAt, untilExclusive));
+  }
+
+  const [agg] = await db
+    .select({
+      sessions: sql<number>`count(*)::int`,
+      avgLatency: sql<number>`coalesce(avg(${aiSession.latencyMs})::float, 0)`,
+      successNum: sql<number>`coalesce(sum(case when ${aiSession.success} is true then 1 else 0 end)::int, 0)`,
+      finished: sql<number>`coalesce(sum(case when ${aiSession.endedAt} is not null then 1 else 0 end)::int, 0)`,
+      costCents: sql<number>`coalesce(sum(${aiSession.costSavedCents})::bigint, 0)::int`,
+    })
+    .from(aiSession)
+    .where(and(...conds));
+
+  const sessionsHandled = Number(agg?.sessions ?? 0);
+  const avgLatencyMs = Math.round(Number(agg?.avgLatency ?? 0));
+  const finished = Number(agg?.finished ?? 0);
+  const successNum = Number(agg?.successNum ?? 0);
+  const successRatePct =
+    finished > 0 ? Math.round((successNum / finished) * 1000) / 10 : 0;
+  const costSavedUsd = Number(agg?.costCents ?? 0) / 100;
+
+  return {
+    sessionsHandled,
+    avgLatencyMs,
+    successRatePct,
+    costSavedUsd,
+  };
+}
+
 export async function getKpiMetrics(userId: string): Promise<KpiMetricsRecord> {
   try {
-    const since = rolling30dStart();
-    const [agg] = await db
-      .select({
-        sessions: sql<number>`count(*)::int`,
-        avgLatency: sql<number>`coalesce(avg(${aiSession.latencyMs})::float, 0)`,
-        successNum: sql<number>`coalesce(sum(case when ${aiSession.success} is true then 1 else 0 end)::int, 0)`,
-        finished: sql<number>`coalesce(sum(case when ${aiSession.endedAt} is not null then 1 else 0 end)::int, 0)`,
-        costCents: sql<number>`coalesce(sum(${aiSession.costSavedCents})::bigint, 0)::int`,
-      })
-      .from(aiSession)
-      .where(and(eq(aiSession.userId, userId), gte(aiSession.startedAt, since)));
+    const since30 = rolling30dStart();
+    const since60 = rolling60dStart();
+    const [current, prior] = await Promise.all([
+      aggregateKpiWindow(userId, since30),
+      aggregateKpiWindow(userId, since60, since30),
+    ]);
 
-    const sessionsHandled = Number(agg?.sessions ?? 0);
-    const avgLatencyMs = Number(agg?.avgLatency ?? 0);
-    const finished = Number(agg?.finished ?? 0);
-    const successNum = Number(agg?.successNum ?? 0);
-    const successRatePct =
-      finished > 0 ? Math.round((successNum / finished) * 1000) / 10 : 0;
-    const costSavedUsd = Number(agg?.costCents ?? 0) / 100;
+    const efficiencyGainPct = efficiencyFromSuccessRate(current.successRatePct);
+    const priorEfficiency = efficiencyFromSuccessRate(prior.successRatePct);
 
-    const efficiencyGainPct = Math.max(
-      0,
-      Math.min(
-        100,
-        Math.round((successRatePct - BASELINE_SUCCESS_PCT) * 10) / 10,
-      ),
-    );
+    const latencyTrendMs =
+      current.sessionsHandled > 0 && prior.sessionsHandled > 0
+        ? current.avgLatencyMs - prior.avgLatencyMs
+        : null;
 
     return {
-      sessionsHandled,
-      avgLatencyMs: Math.round(avgLatencyMs),
-      successRatePct,
-      costSavedUsd,
+      sessionsHandled: current.sessionsHandled,
+      avgLatencyMs: current.avgLatencyMs,
+      successRatePct: current.successRatePct,
+      costSavedUsd: current.costSavedUsd,
       efficiencyGainPct,
+      costSavedTrendPct: pctDelta(current.costSavedUsd, prior.costSavedUsd),
+      sessionsTrendPct: pctDelta(current.sessionsHandled, prior.sessionsHandled),
+      latencyTrendMs,
+      efficiencyTrendPts:
+        Math.round((efficiencyGainPct - priorEfficiency) * 10) / 10,
     };
   } catch {
     return {
@@ -107,6 +171,10 @@ export async function getKpiMetrics(userId: string): Promise<KpiMetricsRecord> {
       successRatePct: 0,
       costSavedUsd: 0,
       efficiencyGainPct: 0,
+      costSavedTrendPct: null,
+      sessionsTrendPct: null,
+      latencyTrendMs: null,
+      efficiencyTrendPts: null,
     };
   }
 }
@@ -226,7 +294,7 @@ export async function getRealtimeStats(userId: string): Promise<RealtimeStatsRec
     const total = Number(health?.total ?? 0);
     const ok = Number(health?.ok ?? 0);
     const streamHealthPct =
-      total > 0 ? Math.round((ok / total) * 1000) / 10 : 99;
+      total > 0 ? Math.round((ok / total) * 1000) / 10 : null;
 
     return {
       activeSessions,
@@ -234,7 +302,7 @@ export async function getRealtimeStats(userId: string): Promise<RealtimeStatsRec
       streamHealthPct,
     };
   } catch {
-    return { activeSessions: 0, eventsPerSecond: 0, streamHealthPct: 99 };
+    return { activeSessions: 0, eventsPerSecond: 0, streamHealthPct: null };
   }
 }
 

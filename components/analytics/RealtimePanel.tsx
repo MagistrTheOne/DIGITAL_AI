@@ -25,6 +25,14 @@ export function RealtimePanel({
   /** Visual load from event rate (not voice); see Live panel description. */
   throughputLoadPct: number;
 }) {
+  const healthLabel = "Turn success (1h)";
+  const healthValue =
+    realtime.streamHealthPct === null
+      ? "—"
+      : `${realtime.streamHealthPct.toFixed(1)}%`;
+  const healthBadge =
+    realtime.streamHealthPct === null ? ("muted" as const) : ("ok" as const);
+
   const metrics = [
     {
       label: "Active sessions",
@@ -37,9 +45,9 @@ export function RealtimePanel({
       badge: "ok" as const,
     },
     {
-      label: "Turn success (1h)",
-      value: `${realtime.streamHealthPct.toFixed(1)}%`,
-      badge: "ok" as const,
+      label: healthLabel,
+      value: healthValue,
+      badge: healthBadge,
     },
   ];
 
@@ -56,7 +64,8 @@ export function RealtimePanel({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm text-neutral-100">Live operations</CardTitle>
         <CardDescription className="text-xs text-neutral-500">
-          Active transcript sessions (recent), usage event rate, last-hour turn success.
+          Active transcript sessions (recent), usage event rate, last-hour turn success. “—”
+          means no turns recorded in the last hour.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2.5">
@@ -78,9 +87,15 @@ export function RealtimePanel({
                     "border-emerald-500/50 bg-emerald-500/15 text-emerald-300",
                   row.badge === "ok" &&
                     "border-neutral-600 bg-neutral-900 text-neutral-400",
+                  row.badge === "muted" &&
+                    "border-neutral-700 bg-neutral-900/80 text-neutral-500",
                 )}
               >
-                {row.badge === "live" ? "Live" : "OK"}
+                {row.badge === "live"
+                  ? "Live"
+                  : row.badge === "muted"
+                    ? "N/A"
+                    : "OK"}
               </Badge>
             </div>
           </div>
