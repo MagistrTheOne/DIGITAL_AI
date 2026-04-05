@@ -79,7 +79,7 @@ export function ResetPasswordForm() {
       <div className="w-full max-w-md rounded-xl border bg-card p-6">
         <div className="text-2xl font-semibold">Set new password</div>
         <div className="mt-2 text-sm text-muted-foreground">
-          Choose a new password for your account.
+          Choose a new password using the link from your email (not the one-time code flow).
         </div>
 
         <div className="mt-6 space-y-3">

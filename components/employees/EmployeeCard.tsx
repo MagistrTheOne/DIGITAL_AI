@@ -1,9 +1,6 @@
 import Link from "next/link";
 
-import {
-  isMiraCatalogPreviewName,
-  MiraLoopPreview,
-} from "@/components/media/MiraLoopPreview";
+import { VideoPlayer } from "@/components/media/VideoPlayer";
 import type { EmployeeDTO } from "@/features/employees/types";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,6 +12,14 @@ import {
 import { CheckCircle2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+const MIRA_PREVIEW_VIDEO = "/avatars/Mira/mira.mp4";
+
+function isMiraCatalogPreviewName(name: string): boolean {
+  const n = name.trim().toLowerCase();
+  if (n.includes("miraz")) return true;
+  return /\bmira\b/.test(n);
+}
 
 export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
   const name = employee.name;
@@ -37,7 +42,13 @@ export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
           )}
         >
           {miraPreview ? (
-            <MiraLoopPreview variant="embedded" />
+            <div className="flex size-full items-center justify-center bg-neutral-950">
+              <VideoPlayer
+                src={MIRA_PREVIEW_VIDEO}
+                className="h-full w-full max-h-full bg-neutral-950 object-contain"
+                unmuteOnHover
+              />
+            </div>
           ) : (
             <div className="flex size-full items-center justify-center text-xs text-neutral-500">
               Preview

@@ -14,6 +14,8 @@ export type PricingPlan = {
   yearlyPriceHint?: string;
   features: string[];
   ctaLabel: string;
+  /** One line under the CTA (e.g. billing trust copy on Pro). */
+  ctaSubtext?: string;
   ctaVariant: "default" | "outline";
   href: string;
   highlighted?: boolean;

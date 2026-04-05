@@ -31,7 +31,7 @@ export function PricingGrid({
         <div className="min-w-0 space-y-0.5">
           <p className="text-sm font-medium text-neutral-200">Billing period</p>
           <p className="text-xs text-neutral-500">
-            Yearly saves on Pro; Free and custom plans unchanged.
+            Yearly saves on Pro, Free and custom plans unchanged.
           </p>
         </div>
         <ToggleGroup
@@ -62,9 +62,10 @@ export function PricingGrid({
 
       <div
         className={cn(
-          "grid w-full grid-cols-1 items-stretch gap-4",
+          "grid w-full grid-cols-1 items-stretch gap-4 overflow-visible",
           "sm:grid-cols-2 sm:gap-5",
-          "lg:grid-cols-4 lg:gap-5",
+          "lg:grid-cols-2 lg:gap-5",
+          "xl:grid-cols-4 xl:gap-5",
         )}
       >
         {PRICING_PLANS.map((plan, index) => {
@@ -78,7 +79,7 @@ export function PricingGrid({
             ctaLabelOverride = "Subscribe with Polar";
           }
           return (
-            <div key={plan.id} className="min-w-0">
+            <div key={plan.id} className="min-w-0 overflow-visible">
               <PricingCard
                 plan={plan}
                 index={index}

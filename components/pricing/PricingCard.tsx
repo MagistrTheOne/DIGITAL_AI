@@ -20,6 +20,8 @@ const STAGGER_DELAY = [
   "delay-[225ms]",
 ] as const;
 
+const HERO_FEATURE_COUNT = 2;
+
 export function PricingCard({
   plan,
   index,
@@ -43,17 +45,25 @@ export function PricingCard({
   const stagger =
     STAGGER_DELAY[Math.min(index, STAGGER_DELAY.length - 1)] ?? "delay-[0ms]";
 
+  const linkRel = "noopener noreferrer";
+
   return (
     <Card
       size="sm"
       className={cn(
         dashboardGlassCardClassName(),
         "gap-0! py-0!",
-        "h-full transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-neutral-600/80",
+        "h-full transition-all duration-200 ease-out",
+        "hover:-translate-y-0.5 hover:border-neutral-600/80",
+        "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         "animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500",
+        "motion-reduce:animate-none motion-reduce:opacity-100",
         stagger,
+        "motion-reduce:delay-0!",
         plan.highlighted &&
           "border-violet-500/35 ring-1 ring-violet-500/25 hover:border-violet-400/45 hover:ring-violet-400/35",
+        plan.highlighted &&
+          "lg:z-10 lg:scale-[1.02] motion-reduce:lg:scale-100",
       )}
     >
       <CardHeader className="border-b border-neutral-800/80 px-5 pb-3 pt-5">
@@ -73,7 +83,7 @@ export function PricingCard({
             </Badge>
           ) : null}
         </div>
-        <div className="mt-2 space-y-0.5">
+        <div className="mt-3 space-y-0.5 border-t border-neutral-800/40 pt-3">
           <p className="text-2xl font-semibold tracking-tight text-neutral-100 transition-colors duration-200">
             {priceLabel}
           </p>
@@ -84,25 +94,43 @@ export function PricingCard({
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col px-5 pb-5 pt-4">
-        <ul className="flex flex-1 flex-col gap-2 text-sm text-neutral-400">
-          {plan.features.map((f) => (
-            <li key={f} className="flex gap-2 transition-colors duration-150 hover:text-neutral-300">
-              <Check
-                className="mt-0.5 size-4 shrink-0 text-neutral-500"
-                aria-hidden
-              />
-              <span>{f}</span>
-            </li>
-          ))}
+        <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-neutral-600">
+          What&apos;s included
+        </p>
+        <ul className="flex flex-1 flex-col gap-2 text-sm">
+          {plan.features.map((f, i) => {
+            const hero = i < HERO_FEATURE_COUNT;
+            return (
+              <li
+                key={`${plan.id}-${i}`}
+                className={cn(
+                  "flex gap-2 transition-colors duration-150",
+                  hero
+                    ? "font-medium text-neutral-300 hover:text-neutral-200"
+                    : "text-neutral-400 hover:text-neutral-300",
+                )}
+              >
+                <Check
+                  className={cn(
+                    "mt-0.5 size-4 shrink-0",
+                    hero ? "text-violet-400/80" : "text-neutral-500",
+                  )}
+                  aria-hidden
+                />
+                <span>{f}</span>
+              </li>
+            );
+          })}
         </ul>
       </CardContent>
 
-      <CardFooter className="mt-auto border-t border-neutral-800/80 px-5 py-3">
+      <CardFooter className="mt-auto flex flex-col gap-2 border-t border-neutral-800/80 px-5 py-3">
         <Button
           asChild
           variant={plan.ctaVariant}
           className={cn(
             "w-full transition-transform duration-150 hover:scale-[1.01] active:scale-[0.99]",
+            "motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100",
             plan.ctaVariant === "default" &&
               "bg-neutral-200 text-neutral-950 hover:bg-neutral-300",
             plan.ctaVariant === "outline" &&
@@ -110,13 +138,20 @@ export function PricingCard({
           )}
         >
           {isExternal ? (
-            <a href={href}>{cta}</a>
+            <a href={href} rel={linkRel}>
+              {cta}
+            </a>
           ) : isApiCheckout ? (
-            <a href={href}>{cta}</a>
+            <a href={href} rel={linkRel}>
+              {cta}
+            </a>
           ) : (
             <Link href={href}>{cta}</Link>
           )}
         </Button>
+        {plan.ctaSubtext ? (
+          <p className="text-center text-xs text-neutral-500">{plan.ctaSubtext}</p>
+        ) : null}
       </CardFooter>
     </Card>
   );
