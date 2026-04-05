@@ -9,6 +9,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     name: "FREE",
     label: "Free",
     limits: {
+      /** Successful chat turns per rolling 30d (see `usage.repository.ts`). */
       sessions: 10,
       tokens: 500_000,
       employees: 2,
@@ -22,6 +23,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     name: "PRO",
     label: "Pro",
     limits: {
+      /** Successful chat turns per rolling 30d. */
       sessions: 100,
       tokens: 5_000_000,
       employees: 15,

@@ -61,7 +61,7 @@ export function EmployeePerformanceList({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm text-neutral-100">Per-employee operations</CardTitle>
         <CardDescription className="text-xs text-neutral-500">
-          Throughput, success rate, and latency by agent.
+          Transcript sessions per agent, turn success rate, and mean latency.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-0 px-0 pb-1">
@@ -78,7 +78,7 @@ export function EmployeePerformanceList({
                 </div>
                 <div className="text-xs tabular-nums text-neutral-400 sm:text-right">
                   {r.sessions}{" "}
-                  <span className="text-neutral-600">sess.</span>
+                  <span className="text-neutral-600">transcripts</span>
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-[10px] text-neutral-500">

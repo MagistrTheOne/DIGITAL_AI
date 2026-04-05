@@ -23,6 +23,8 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  /** Optional company / team label collected at sign-up. */
+  organization: text("organization"),
   /** Assignment only; limits/features live in `features/account/plan-config.ts`. */
   planType: text("plan_type").notNull().default("FREE"),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -176,6 +178,8 @@ export const usageEvent = pgTable(
     sessionId: text("session_id").references(() => aiSession.id, {
       onDelete: "set null",
     }),
+    /** Populated for chat telemetry; backfilled from `ai_sessions` for legacy rows. */
+    employeeId: text("employee_id"),
     eventType: text("event_type").notNull(),
     quantity: integer("quantity").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -185,6 +189,11 @@ export const usageEvent = pgTable(
   (table) => [
     index("usage_events_user_created_idx").on(table.userId, table.createdAt),
     index("usage_events_session_idx").on(table.sessionId),
+    index("usage_events_user_employee_created_idx").on(
+      table.userId,
+      table.employeeId,
+      table.createdAt,
+    ),
   ],
 );
 
@@ -309,6 +318,10 @@ export const usageEventRelations = relations(usageEvent, ({ one }) => ({
   session: one(aiSession, {
     fields: [usageEvent.sessionId],
     references: [aiSession.id],
+  }),
+  employee: one(employee, {
+    fields: [usageEvent.employeeId],
+    references: [employee.id],
   }),
 }));
 

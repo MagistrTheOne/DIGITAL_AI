@@ -43,6 +43,7 @@ export async function getSettingsDTO(): Promise<SettingsDTO | null> {
       name: user.name,
       email: user.email,
       image: user.image,
+      organization: user.organization,
     })
     .from(user)
     .where(eq(user.id, userId))
@@ -87,6 +88,7 @@ export async function getSettingsDTO(): Promise<SettingsDTO | null> {
       name: u.name,
       email: u.email,
       image: u.image ?? null,
+      organization: u.organization?.trim() ? u.organization.trim() : null,
     },
     billing: {
       planType: plan.name,

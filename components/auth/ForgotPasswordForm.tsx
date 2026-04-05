@@ -30,7 +30,9 @@ export function ForgotPasswordForm() {
         return;
       }
       setStatus(
-        "If an account exists for this email, you will receive reset instructions (check logs in development).",
+        process.env.NODE_ENV === "development"
+          ? "If an account exists for this email, you will receive reset instructions. Without RESEND_API_KEY, check the dev server logs for the link."
+          : "If an account exists for this email, you will receive reset instructions shortly.",
       );
     } catch (e: unknown) {
       setError(getAuthErrorMessage(e, "Something went wrong."));

@@ -1,7 +1,7 @@
 /**
  * Analytics aggregates — telemetry from `ai_sessions` + `usage_events`.
  */
-import { and, count, eq, gte, isNull, lt, sql } from "drizzle-orm";
+import { and, count, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 
 /** Open `ai_sessions` rows without `ended_at` older than this are not counted as active. */
 const ACTIVE_SESSION_TTL_MS = 15 * 60 * 1000;
@@ -13,11 +13,24 @@ function activeSessionSince(): Date {
 import { db } from "@/db";
 import { aiSession, usageEvent } from "@/db/schema";
 import { listEmployeesByQuery } from "@/services/db/repositories/employees.repository";
+import {
+  USAGE_EVENT_ARACHNE_CHAT_ERROR,
+  USAGE_EVENT_ARACHNE_CHAT_TURN,
+  USAGE_EVENT_CHAT_ERROR,
+  USAGE_EVENT_CHAT_TURN,
+  CHAT_TURN_ALL_EVENT_TYPES,
+  CHAT_TURN_SUCCESS_EVENT_TYPES,
+} from "@/services/db/repositories/telemetry.repository";
 import { getUsageForUser } from "@/services/db/repositories/usage.repository";
 
 import type { EmployeeListQuery } from "@/features/employees/types";
 
-const BASELINE_SUCCESS_PCT = 85;
+function getAnalyticsBaselineSuccessPct(): number {
+  const raw = process.env.ANALYTICS_BASELINE_SUCCESS_PCT?.trim();
+  if (!raw) return 85;
+  const n = Number.parseFloat(raw);
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : 85;
+}
 
 function rolling30dStart(): Date {
   return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -45,12 +58,9 @@ export type KpiMetricsRecord = {
   successRatePct: number;
   costSavedUsd: number;
   efficiencyGainPct: number;
-  /** % change vs prior 30d; null when prior window has no comparable baseline. */
   costSavedTrendPct: number | null;
   sessionsTrendPct: number | null;
-  /** Current avg latency minus prior-30d avg; null when either window has no sessions. */
   latencyTrendMs: number | null;
-  /** Efficiency (success vs baseline) change vs prior 30d, percentage points. */
   efficiencyTrendPts: number | null;
 };
 
@@ -66,7 +76,6 @@ export type EmployeePerformanceRecord = {
 export type RealtimeStatsRecord = {
   activeSessions: number;
   eventsPerSecond: number;
-  /** Last-hour turn success rate; null when no turns in that window. */
   streamHealthPct: number | null;
 };
 
@@ -76,11 +85,12 @@ export type TimelineHourRecord = {
 };
 
 function efficiencyFromSuccessRate(successRatePct: number): number {
+  const baseline = getAnalyticsBaselineSuccessPct();
   return Math.max(
     0,
     Math.min(
       100,
-      Math.round((successRatePct - BASELINE_SUCCESS_PCT) * 10) / 10,
+      Math.round((successRatePct - baseline) * 10) / 10,
     ),
   );
 }
@@ -90,6 +100,49 @@ function pctDelta(curr: number, prev: number): number | null {
   return Math.round(((curr - prev) / prev) * 1000) / 10;
 }
 
+async function countChatTurnOutcomes(
+  userId: string,
+  sinceInclusive: Date,
+  untilExclusive?: Date,
+): Promise<{ ok: number; total: number }> {
+  const windowCond = [
+    eq(usageEvent.userId, userId),
+    gte(usageEvent.createdAt, sinceInclusive),
+  ];
+  if (untilExclusive) {
+    windowCond.push(lt(usageEvent.createdAt, untilExclusive));
+  }
+
+  const [okRow] = await db
+    .select({ c: count() })
+    .from(usageEvent)
+    .where(
+      and(
+        ...windowCond,
+        inArray(usageEvent.eventType, [...CHAT_TURN_SUCCESS_EVENT_TYPES]),
+      ),
+    );
+
+  const [totalRow] = await db
+    .select({ c: count() })
+    .from(usageEvent)
+    .where(
+      and(
+        ...windowCond,
+        inArray(usageEvent.eventType, [...CHAT_TURN_ALL_EVENT_TYPES]),
+      ),
+    );
+
+  return {
+    ok: Number(okRow?.c ?? 0),
+    total: Number(totalRow?.c ?? 0),
+  };
+}
+
+function successRateFromTurns(ok: number, total: number): number {
+  return total > 0 ? Math.round((ok / total) * 1000) / 10 : 0;
+}
+
 async function aggregateKpiWindow(
   userId: string,
   sinceInclusive: Date,
@@ -97,7 +150,6 @@ async function aggregateKpiWindow(
 ): Promise<{
   sessionsHandled: number;
   avgLatencyMs: number;
-  successRatePct: number;
   costSavedUsd: number;
 }> {
   const conds = [
@@ -112,26 +164,15 @@ async function aggregateKpiWindow(
     .select({
       sessions: sql<number>`count(*)::int`,
       avgLatency: sql<number>`coalesce(avg(${aiSession.latencyMs})::float, 0)`,
-      successNum: sql<number>`coalesce(sum(case when ${aiSession.success} is true then 1 else 0 end)::int, 0)`,
-      finished: sql<number>`coalesce(sum(case when ${aiSession.endedAt} is not null then 1 else 0 end)::int, 0)`,
       costCents: sql<number>`coalesce(sum(${aiSession.costSavedCents})::bigint, 0)::int`,
     })
     .from(aiSession)
     .where(and(...conds));
 
-  const sessionsHandled = Number(agg?.sessions ?? 0);
-  const avgLatencyMs = Math.round(Number(agg?.avgLatency ?? 0));
-  const finished = Number(agg?.finished ?? 0);
-  const successNum = Number(agg?.successNum ?? 0);
-  const successRatePct =
-    finished > 0 ? Math.round((successNum / finished) * 1000) / 10 : 0;
-  const costSavedUsd = Number(agg?.costCents ?? 0) / 100;
-
   return {
-    sessionsHandled,
-    avgLatencyMs,
-    successRatePct,
-    costSavedUsd,
+    sessionsHandled: Number(agg?.sessions ?? 0),
+    avgLatencyMs: Math.round(Number(agg?.avgLatency ?? 0)),
+    costSavedUsd: Number(agg?.costCents ?? 0) / 100,
   };
 }
 
@@ -139,13 +180,18 @@ export async function getKpiMetrics(userId: string): Promise<KpiMetricsRecord> {
   try {
     const since30 = rolling30dStart();
     const since60 = rolling60dStart();
-    const [current, prior] = await Promise.all([
+    const [current, prior, turnCur, turnPrior] = await Promise.all([
       aggregateKpiWindow(userId, since30),
       aggregateKpiWindow(userId, since60, since30),
+      countChatTurnOutcomes(userId, since30),
+      countChatTurnOutcomes(userId, since60, since30),
     ]);
 
-    const efficiencyGainPct = efficiencyFromSuccessRate(current.successRatePct);
-    const priorEfficiency = efficiencyFromSuccessRate(prior.successRatePct);
+    const successRatePct = successRateFromTurns(turnCur.ok, turnCur.total);
+    const priorSuccessRatePct = successRateFromTurns(turnPrior.ok, turnPrior.total);
+
+    const efficiencyGainPct = efficiencyFromSuccessRate(successRatePct);
+    const priorEfficiency = efficiencyFromSuccessRate(priorSuccessRatePct);
 
     const latencyTrendMs =
       current.sessionsHandled > 0 && prior.sessionsHandled > 0
@@ -155,7 +201,7 @@ export async function getKpiMetrics(userId: string): Promise<KpiMetricsRecord> {
     return {
       sessionsHandled: current.sessionsHandled,
       avgLatencyMs: current.avgLatencyMs,
-      successRatePct: current.successRatePct,
+      successRatePct,
       costSavedUsd: current.costSavedUsd,
       efficiencyGainPct,
       costSavedTrendPct: pctDelta(current.costSavedUsd, prior.costSavedUsd),
@@ -189,14 +235,35 @@ export async function getEmployeePerformance(
         employeeId: aiSession.employeeId,
         sessions: sql<number>`count(*)::int`,
         avgLatencyMs: sql<number>`coalesce(avg(${aiSession.latencyMs})::float, 0)`,
-        successRatePct: sql<number>`
-          (coalesce(sum(case when ${aiSession.success} is true then 1 else 0 end)::float, 0)
-          / nullif(count(*)::float, 0)) * 100
-        `,
       })
       .from(aiSession)
       .where(and(eq(aiSession.userId, userId), gte(aiSession.startedAt, since)))
       .groupBy(aiSession.employeeId);
+
+    const turnRows = await db
+      .select({
+        employeeId: usageEvent.employeeId,
+        ok: sql<number>`coalesce(sum(case when (${usageEvent.eventType} = ${USAGE_EVENT_CHAT_TURN} or ${usageEvent.eventType} = ${USAGE_EVENT_ARACHNE_CHAT_TURN}) then 1 else 0 end)::int, 0)`,
+        total: sql<number>`coalesce(sum(case when (${usageEvent.eventType} = ${USAGE_EVENT_CHAT_TURN} or ${usageEvent.eventType} = ${USAGE_EVENT_ARACHNE_CHAT_TURN} or ${usageEvent.eventType} = ${USAGE_EVENT_CHAT_ERROR} or ${usageEvent.eventType} = ${USAGE_EVENT_ARACHNE_CHAT_ERROR}) then 1 else 0 end)::int, 0)`,
+      })
+      .from(usageEvent)
+      .where(
+        and(
+          eq(usageEvent.userId, userId),
+          gte(usageEvent.createdAt, since),
+          isNotNull(usageEvent.employeeId),
+        ),
+      )
+      .groupBy(usageEvent.employeeId);
+
+    const rateByEmployee = new Map<string, number>();
+    for (const t of turnRows) {
+      const eid = t.employeeId;
+      if (!eid) continue;
+      const ok = Number(t.ok ?? 0);
+      const tot = Number(t.total ?? 0);
+      rateByEmployee.set(eid, successRateFromTurns(ok, tot));
+    }
 
     const open = await db
       .selectDistinct({ employeeId: aiSession.employeeId })
@@ -215,7 +282,7 @@ export async function getEmployeePerformance(
     const nameById = new Map(employees.map((e) => [e.id, e.name]));
 
     const mapped = rows.map((r) => {
-      const successRatePct = Math.round(Number(r.successRatePct) * 10) / 10;
+      const successRatePct = rateByEmployee.get(r.employeeId) ?? 0;
       const avgLatencyMs = Math.round(Number(r.avgLatencyMs));
       let status: EmployeePerformanceRecord["status"] = "idle";
       if (activeSet.has(r.employeeId)) status = "active";
@@ -238,7 +305,7 @@ export async function getEmployeePerformance(
           employeeId: e.id,
           name: e.name,
           sessions: 0,
-          successRatePct: 0,
+          successRatePct: rateByEmployee.get(e.id) ?? 0,
           avgLatencyMs: 0,
           status: "idle",
         });
@@ -281,20 +348,11 @@ export async function getRealtimeStats(userId: string): Promise<RealtimeStatsRec
     const eventsPerSecond = Math.round((eventsInWindow / 60) * 100) / 100;
 
     const since1h = rolling1hStart();
-    const [health] = await db
-      .select({
-        ok: sql<number>`coalesce(sum(case when ${aiSession.success} is true then 1 else 0 end)::int, 0)`,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(aiSession)
-      .where(
-        and(eq(aiSession.userId, userId), gte(aiSession.startedAt, since1h)),
-      );
-
-    const total = Number(health?.total ?? 0);
-    const ok = Number(health?.ok ?? 0);
+    const turn1h = await countChatTurnOutcomes(userId, since1h);
     const streamHealthPct =
-      total > 0 ? Math.round((ok / total) * 1000) / 10 : null;
+      turn1h.total > 0
+        ? Math.round((turn1h.ok / turn1h.total) * 1000) / 10
+        : null;
 
     return {
       activeSessions,

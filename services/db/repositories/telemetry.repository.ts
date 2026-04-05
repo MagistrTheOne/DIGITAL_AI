@@ -12,6 +12,20 @@ export const USAGE_EVENT_CHAT_ERROR = "openai.chat.error";
 export const USAGE_EVENT_ARACHNE_CHAT_TURN = "arachne.chat.turn";
 export const USAGE_EVENT_ARACHNE_CHAT_ERROR = "arachne.chat.error";
 
+/** Successful chat turns (for usage caps + success rate). */
+export const CHAT_TURN_SUCCESS_EVENT_TYPES = [
+  USAGE_EVENT_CHAT_TURN,
+  USAGE_EVENT_ARACHNE_CHAT_TURN,
+] as const;
+
+/** All chat turn outcomes including errors. */
+export const CHAT_TURN_ALL_EVENT_TYPES = [
+  USAGE_EVENT_CHAT_TURN,
+  USAGE_EVENT_ARACHNE_CHAT_TURN,
+  USAGE_EVENT_CHAT_ERROR,
+  USAGE_EVENT_ARACHNE_CHAT_ERROR,
+] as const;
+
 function newEventId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -89,6 +103,7 @@ export async function recordChatTurnTelemetry(
     id: newEventId(),
     userId,
     sessionId: clientSessionId,
+    employeeId,
     eventType,
     quantity,
   });

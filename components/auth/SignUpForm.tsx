@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const MIN_PASSWORD = 8;
+const MAX_ORGANIZATION_LEN = 120;
 const CALLBACK_PATH = "/ai-digital";
 
 type Step = "register" | "verify";
@@ -18,6 +19,7 @@ export function SignUpForm({ showGoogleSignIn }: { showGoogleSignIn: boolean }) 
   const router = useRouter();
   const [step, setStep] = React.useState<Step>("register");
   const [name, setName] = React.useState("");
+  const [organization, setOrganization] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
@@ -51,6 +53,11 @@ export function SignUpForm({ showGoogleSignIn }: { showGoogleSignIn: boolean }) 
       setError("Passwords do not match.");
       return;
     }
+    const orgTrimmed = organization.trim();
+    if (orgTrimmed.length > MAX_ORGANIZATION_LEN) {
+      setError(`Organization must be at most ${MAX_ORGANIZATION_LEN} characters.`);
+      return;
+    }
     setLoading(true);
     try {
       const result = await authClient.signUp.email({
@@ -58,6 +65,9 @@ export function SignUpForm({ showGoogleSignIn }: { showGoogleSignIn: boolean }) 
         email: email.trim(),
         password,
         callbackURL: CALLBACK_PATH,
+        ...(orgTrimmed
+          ? { organization: orgTrimmed }
+          : {}),
       });
       if (result.error) {
         setError(getAuthErrorMessage(result.error, "Could not create account."));
@@ -67,7 +77,9 @@ export function SignUpForm({ showGoogleSignIn }: { showGoogleSignIn: boolean }) 
       if (user && !user.emailVerified) {
         setStep("verify");
         setStatus(
-          "Account created. Enter the verification code sent to your email (or check dev server logs).",
+          process.env.NODE_ENV === "development"
+            ? "Account created. Enter the verification code from your email. If RESEND_API_KEY is not set, check the dev server logs for the code."
+            : "Account created. Enter the verification code sent to your email.",
         );
         return;
       }
@@ -160,6 +172,13 @@ export function SignUpForm({ showGoogleSignIn }: { showGoogleSignIn: boolean }) 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoComplete="name"
+              />
+              <Input
+                placeholder="Your organization (optional)"
+                value={organization}
+                onChange={(e) => setOrganization(e.target.value)}
+                autoComplete="organization"
+                maxLength={MAX_ORGANIZATION_LEN}
               />
               <Input
                 type="email"

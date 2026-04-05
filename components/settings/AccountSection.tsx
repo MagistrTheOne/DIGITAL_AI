@@ -194,6 +194,22 @@ export function AccountSection() {
                 Profile name updates will sync when account API is wired.
               </p>
             </div>
+            {account.organization ? (
+              <div className="space-y-2">
+                <Label htmlFor="settings-organization" className="text-neutral-300">
+                  Organization
+                </Label>
+                <Input
+                  id="settings-organization"
+                  readOnly
+                  value={account.organization}
+                  className="cursor-not-allowed border-neutral-800 bg-neutral-900/40 text-neutral-400"
+                />
+                <p className="text-xs text-neutral-600">
+                  Set when you created your account.
+                </p>
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="settings-email" className="text-neutral-300">
                 Email

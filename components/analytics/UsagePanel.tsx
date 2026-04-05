@@ -49,13 +49,13 @@ function formatSessionLimit(n: number): string {
 }
 
 function sessionProjection(used: number, limit: number): string {
-  if (limit <= 0 || limit === -1) return "No session cap on your plan.";
+  if (limit <= 0 || limit === -1) return "No chat-turn cap on your plan.";
   const remaining = limit - used;
-  if (remaining <= 0) return "At session cap — upgrade or wait for reset.";
+  if (remaining <= 0) return "At chat-turn cap — upgrade or wait for reset.";
   const dailyBurn = used / 30;
   if (dailyBurn <= 0) return "~30+ days runway at current burn.";
   const days = remaining / dailyBurn;
-  return `~${Math.max(1, Math.round(days))} days until session limit at current burn.`;
+  return `~${Math.max(1, Math.round(days))} days until turn limit at current burn.`;
 }
 
 export function UsagePanel({
@@ -85,7 +85,7 @@ export function UsagePanel({
           <div>
             <CardTitle className="text-sm text-neutral-100">Usage & plan caps</CardTitle>
             <CardDescription className="text-xs text-neutral-500">
-              Runway vs billing limits — primary for procurement.
+              Successful chat turns and tokens vs plan caps (rolling 30d).
             </CardDescription>
           </div>
           <span
@@ -106,7 +106,7 @@ export function UsagePanel({
       <CardContent className="space-y-3">
         <div className="space-y-2">
           <div className="flex items-baseline justify-between gap-2 text-xs">
-            <span className="text-neutral-500">Sessions</span>
+            <span className="text-neutral-500">Chat turns (ok)</span>
             <span className="tabular-nums text-neutral-300">{sessionLabel}</span>
           </div>
           <Progress value={sessionPct} className={progressBarClass(sessionPct)} />

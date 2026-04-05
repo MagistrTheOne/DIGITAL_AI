@@ -19,9 +19,21 @@ const TIER_NAMES = [
   "Fleet",
 ] as const;
 
+function getWorkforceSessionsPerTier(): number {
+  const raw = process.env.ANALYTICS_WORKFORCE_SESSIONS_PER_TIER?.trim();
+  const n = Number.parseInt(raw ?? "500", 10);
+  return Number.isFinite(n) && n > 0 ? n : 500;
+}
+
+function getFteSessionsDivisor(): number {
+  const raw = process.env.ANALYTICS_FTE_SESSIONS_DIVISOR?.trim();
+  const n = Number.parseFloat(raw ?? "4000");
+  return Number.isFinite(n) && n > 0 ? n : 4000;
+}
+
 function computeWorkforceLevel(sessionsHandled: number) {
-  const level = Math.min(6, Math.max(1, Math.floor(sessionsHandled / 500) + 1));
-  const span = 500;
+  const span = getWorkforceSessionsPerTier();
+  const level = Math.min(6, Math.max(1, Math.floor(sessionsHandled / span) + 1));
   const progressPct = Math.min(
     100,
     Math.round(((sessionsHandled % span) / span) * 100),
@@ -31,8 +43,7 @@ function computeWorkforceLevel(sessionsHandled: number) {
     level,
     tierName,
     progressPct,
-    hint:
-      "Optimize latency and increase sessions to reach the next tier — telemetry-driven progression.",
+    hint: `Levels use distinct transcript sessions in the last 30d (~${span} sessions per level). Set ANALYTICS_WORKFORCE_SESSIONS_PER_TIER to match your rollout.`,
   };
 }
 
@@ -41,8 +52,9 @@ function computeBusinessImpact(kpis: {
   costSavedUsd: number;
 }): AnalyticsDashboardDTO["businessImpact"] {
   const aiHandledTasks = kpis.sessionsHandled;
-  const equivalentFte = Math.round((aiHandledTasks / 4000) * 10) / 10;
-  const narrative = `AI replaced roughly ${equivalentFte} full-time equivalents this period — reinvest capacity into higher-leverage work (model estimate).`;
+  const divisor = getFteSessionsDivisor();
+  const equivalentFte = Math.round((aiHandledTasks / divisor) * 10) / 10;
+  const narrative = `AI replaced roughly ${equivalentFte} full-time equivalents this period (model: one FTE ≈ ${divisor} transcript sessions recorded in 30d — tune ANALYTICS_FTE_SESSIONS_DIVISOR). Reinvest capacity into higher-leverage work.`;
 
   return {
     aiHandledTasks,

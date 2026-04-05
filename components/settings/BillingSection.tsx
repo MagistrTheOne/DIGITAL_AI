@@ -55,12 +55,14 @@ export function BillingSection() {
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-neutral-800/80 bg-neutral-900/40 px-3 py-2.5">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-              Sessions
+              Chat turns
             </p>
             <p className="mt-1 text-xl font-semibold tabular-nums text-neutral-100">
               {sessionsDisplay}
             </p>
-            <p className="mt-1 text-xs text-neutral-600">Rolling 30d · AI sessions</p>
+            <p className="mt-1 text-xs text-neutral-600">
+              Rolling 30d · successful turns (plan cap)
+            </p>
           </div>
           <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-3">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">

@@ -27,7 +27,7 @@ export function BusinessImpactCard({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm text-neutral-100">Business impact</CardTitle>
         <CardDescription className="text-xs text-neutral-500">
-          ROI narrative for finance — model estimate.
+          Heuristic ROI — FTE divisor from ANALYTICS_FTE_SESSIONS_DIVISOR (default 4000 transcript sessions).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

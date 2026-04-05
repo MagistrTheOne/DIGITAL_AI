@@ -27,7 +27,7 @@ export function WorkforceLevelCard({
         <div className="space-y-0.5">
           <CardTitle className="text-sm text-neutral-100">AI workforce level</CardTitle>
           <CardDescription className="text-xs text-neutral-500">
-            Progression signal — secondary to usage and reliability.
+            Gamified tier from transcript-session volume — secondary to usage caps.
           </CardDescription>
         </div>
         <Badge

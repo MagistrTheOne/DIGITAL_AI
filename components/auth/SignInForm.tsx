@@ -108,7 +108,7 @@ export function SignInForm({ showGoogleSignIn }: { showGoogleSignIn: boolean }) 
       <div className="w-full max-w-md rounded-xl border bg-card p-6">
         <div className="text-2xl font-semibold">Sign in</div>
         <div className="mt-2 text-sm text-muted-foreground">
-          Password, email code, or Google — powered by Better Auth.
+          Password, email code
         </div>
 
         {showGoogleSignIn ? (

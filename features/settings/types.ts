@@ -7,6 +7,8 @@ export type SettingsAccountDTO = {
   name: string;
   email: string;
   image: string | null;
+  /** From sign-up; not editable in UI until a profile API exists. */
+  organization: string | null;
 };
 
 export type SettingsBillingDTO = {
