@@ -6,10 +6,18 @@
 export type ArachneAvatarPreviewInput = {
   employeeId: string;
   displayName?: string;
-  /** Employee system / behavior prompt from config — sent as hint for generation. */
+  /** Behavior / system prompt — optional hint for workers that still read a single string. */
   promptHint?: string;
+  /** T2V positive prompt (same semantics as RunPod `positivePrompt`). */
+  positivePrompt: string;
+  /** T2V negative prompt (same semantics as RunPod `negativePrompt`). */
+  negativePrompt: string;
+  /** Matches `buildEmployeeAvatarPrompts` template revision. */
+  promptTemplateVersion: number;
   /** Optional reference still (data URL or https URL) for image-conditioned modes. */
   referenceImage?: string;
+  /** Opaque knobs (e.g. width/height/frames) from `EmployeeConfigJson.renderProfile`. */
+  generationProfile?: Record<string, unknown>;
 };
 
 export type ArachneAvatarPreviewResult =
@@ -39,12 +47,21 @@ export async function requestArachneAvatarPreview(
     };
   }
 
-  const body: Record<string, string | undefined> = {
+  const body: Record<string, unknown> = {
     employeeId: input.employeeId,
     displayName: input.displayName,
     promptHint: input.promptHint,
+    positivePrompt: input.positivePrompt,
+    negativePrompt: input.negativePrompt,
+    promptTemplateVersion: input.promptTemplateVersion,
     referenceImage: input.referenceImage,
   };
+  if (
+    input.generationProfile &&
+    Object.keys(input.generationProfile).length > 0
+  ) {
+    body.generationProfile = input.generationProfile;
+  }
 
   try {
     const res = await fetch(endpoint, {

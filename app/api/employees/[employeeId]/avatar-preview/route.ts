@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { requestArachneAvatarPreview } from "@/features/arachine-x/server/arachneAvatarPreview.server";
 import { getCurrentSession } from "@/lib/auth/session.server";
 import {
+  buildEmployeeAvatarPromptContext,
+  buildEmployeeAvatarPrompts,
+} from "@/lib/inference/build-employee-avatar-prompt.server";
+import {
   getEmployeeRowById,
   type EmployeeConfigJson,
   updateEmployeeAvatarPreviewState,
@@ -45,12 +49,28 @@ export async function POST(
 
   const cfg = (row.config ?? {}) as EmployeeConfigJson;
   const promptHint = typeof cfg.prompt === "string" ? cfg.prompt : undefined;
+  const promptCtx = buildEmployeeAvatarPromptContext({
+    name: row.name,
+    roleColumn: row.role,
+    config: cfg,
+  });
+  const prompts = buildEmployeeAvatarPrompts(promptCtx);
+  const generationProfile =
+    cfg.renderProfile &&
+    typeof cfg.renderProfile === "object" &&
+    !Array.isArray(cfg.renderProfile)
+      ? cfg.renderProfile
+      : undefined;
 
   const preview = await requestArachneAvatarPreview({
     employeeId,
     displayName: row.name,
     promptHint,
+    positivePrompt: prompts.positivePrompt,
+    negativePrompt: prompts.negativePrompt,
+    promptTemplateVersion: prompts.promptTemplateVersion,
     referenceImage,
+    generationProfile,
   });
 
   if (!preview.ok) {

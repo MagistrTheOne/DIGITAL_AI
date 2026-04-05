@@ -60,11 +60,12 @@ export function buildEmployeeAvatarPrompts(ctx: EmployeeAvatarPromptContext): {
 
   const negativePrompt =
     "low quality, blurry, deformed face, bad anatomy, extra limbs, watermark, text, logo, flicker, " +
-    "cartoon, anime, distorted, overexposed";
+    "teenager, childlike, cartoon, anime, ugly, distorted, old, wrinkles, " +
+    "overexposed";
 
   return {
     positivePrompt,
     negativePrompt,
-    promptTemplateVersion: 1,
+    promptTemplateVersion: 2,
   };
 }

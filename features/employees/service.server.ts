@@ -19,7 +19,7 @@ import {
   type EmployeeRecord,
 } from "@/services/db/repositories/employees.repository";
 import { mintArachneSessionForEmployee } from "@/features/arachine-x/server/arachneAvatarBootstrap.server";
-import { enqueueRunPodAvatarJobIfConfigured } from "@/lib/inference/runpod-avatar.server";
+import { enqueuePostDeployAvatarGeneration } from "@/lib/inference/avatar-generation-after-deploy.server";
 
 function toRoleCategory(role: string): EmployeeRoleCategory {
   switch (role) {
@@ -226,17 +226,25 @@ export async function createEmployee(
   }
 
   const name = ensureVantageName(input.name);
+  const role = dbRoleFromInput(input);
+  const config = employeeConfigFromWizard(input);
 
   try {
     const { id } = await insertEmployeeRow({
       userId,
       name,
-      role: dbRoleFromInput(input),
+      role,
       status: "active",
-      config: employeeConfigFromWizard(input),
+      config,
     });
 
-    void enqueueRunPodAvatarJobIfConfigured({ employeeId: id, userId });
+    enqueuePostDeployAvatarGeneration({
+      employeeId: id,
+      userId,
+      name,
+      role,
+      config: config as EmployeeConfigJson,
+    });
 
     return { ok: true, employeeId: id };
   } catch (err) {
@@ -350,9 +358,12 @@ export async function finalizeDraftEmployee(
       config,
     });
 
-    void enqueueRunPodAvatarJobIfConfigured({
+    enqueuePostDeployAvatarGeneration({
       employeeId: draftEmployeeId.trim(),
       userId,
+      name,
+      role,
+      config: config as EmployeeConfigJson,
     });
 
     return { ok: true, employeeId: draftEmployeeId.trim() };

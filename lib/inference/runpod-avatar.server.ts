@@ -17,6 +17,11 @@ function getRunPodConfig(): { apiKey: string; endpointId: string } | null {
   return { apiKey, endpointId };
 }
 
+/** True when post-deploy avatar enqueue should use RunPod (takes precedence over ARACHNE). */
+export function isRunPodAvatarConfigured(): boolean {
+  return getRunPodConfig() !== null;
+}
+
 function extractVideoUrlFromRunPodOutput(output: unknown): string | null {
   if (output == null) return null;
   if (typeof output === "string" && /^https?:\/\//i.test(output)) return output;

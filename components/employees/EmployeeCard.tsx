@@ -23,7 +23,12 @@ function isMiraCatalogPreviewName(name: string): boolean {
 
 export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
   const name = employee.name;
-  const miraPreview = isMiraCatalogPreviewName(name);
+  const videoSrc = employee.videoPreview?.src?.trim();
+  const miraFallback =
+    !videoSrc && isMiraCatalogPreviewName(name) ? MIRA_PREVIEW_VIDEO : null;
+  const showVideo = Boolean(videoSrc || miraFallback);
+  const playerSrc = videoSrc ?? miraFallback ?? "";
+  const tallMiraLayout = Boolean(miraFallback && !videoSrc);
 
   return (
     <Link href={`/employees/${employee.id}`} className="block outline-none">
@@ -36,15 +41,15 @@ export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
         <div
           className={cn(
             "w-full overflow-hidden border-b border-neutral-800 bg-neutral-950",
-            miraPreview
+            tallMiraLayout
               ? "aspect-3/4 min-h-48 sm:min-h-56"
               : "aspect-video bg-neutral-900",
           )}
         >
-          {miraPreview ? (
+          {showVideo ? (
             <div className="flex size-full items-center justify-center bg-neutral-950">
               <VideoPlayer
-                src={MIRA_PREVIEW_VIDEO}
+                src={playerSrc}
                 className="h-full w-full max-h-full bg-neutral-950 object-contain"
                 unmuteOnHover
               />
