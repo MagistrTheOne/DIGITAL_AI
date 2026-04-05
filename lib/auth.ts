@@ -5,6 +5,7 @@ import { dash } from "@better-auth/infra";
 
 import { db } from "@/db";
 import * as schema from "@/db/schema";
+import { sendTransactionalEmail } from "@/lib/email/send-transactional.server";
 
 /* =========================
    ENV HELPERS
@@ -52,60 +53,6 @@ function getBaseUrl(): string {
     );
   }
   return "http://localhost:3000";
-}
-
-/* =========================
-   EMAIL SENDER
-========================= */
-
-async function sendTransactionalEmail(input: {
-  to: string;
-  subject: string;
-  html: string;
-  text: string;
-}) {
-  const key = process.env.RESEND_API_KEY?.trim();
-  const from =
-    process.env.EMAIL_FROM?.trim() || "NULLXES <no-reply@nullxes.com>";
-
-  if (!key) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("RESEND_API_KEY required in production");
-    }
-
-    console.log(
-      `[AUTH:DEV_EMAIL] → ${input.to}\n${input.subject}\n${input.text}`
-    );
-    return;
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
-
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        from,
-        to: [input.to],
-        subject: input.subject,
-        html: input.html,
-        text: input.text,
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Resend error ${res.status}: ${body}`);
-    }
-  } finally {
-    clearTimeout(timeout);
-  }
 }
 
 type EmailOtpType =

@@ -30,7 +30,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       className={cn(
-        "dark h-full",
+        "dark h-full scroll-smooth",
         "antialiased",
         geistSans.variable,
         geistMono.variable,

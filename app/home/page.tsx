@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 
 import { LandingPage } from "@/components/landing/LandingPage";
-import { getCurrentSession } from "@/lib/auth/session.server";
 
 export const metadata: Metadata = {
   title: "NULLXES — AI digital workforce",
@@ -10,10 +8,7 @@ export const metadata: Metadata = {
     "Deploy digital employees with voice, avatar, and production-ready workflows. NULLXES is the control plane for your AI workforce.",
 };
 
-export default async function Page() {
-  const session = await getCurrentSession();
-  if (session?.user) {
-    redirect("/ai-digital");
-  }
+/** Marketing landing; always shown (no redirect when signed in). */
+export default function HomeMarketingPage() {
   return <LandingPage />;
 }
