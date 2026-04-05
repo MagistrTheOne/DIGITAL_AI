@@ -16,4 +16,9 @@ export const CAPABILITY_OPTIONS = [
   "Scheduling",
 ] as const;
 
-export const STEP_LABELS = ["Role", "Identity", "Behavior", "Preview"] as const;
+export const STEP_LABELS = [
+  "Role & look",
+  "Identity",
+  "Behavior",
+  "Preview",
+] as const;

@@ -24,7 +24,7 @@ import type { CreateEmployeeInput, EmployeeRoleCategory } from "@/features/emplo
 import { BehaviorForm } from "@/components/create-employee/BehaviorForm";
 import { IdentityForm } from "@/components/create-employee/IdentityForm";
 import { PreviewPanel } from "@/components/create-employee/PreviewPanel";
-import { RoleSelector } from "@/components/create-employee/RoleSelector";
+import { RoleAndAppearanceStep } from "@/components/create-employee/RoleAndAppearanceStep";
 import { Stepper } from "@/components/create-employee/Stepper";
 
 const TOTAL_STEPS = 4;
@@ -175,7 +175,9 @@ export function CreateEmployeeWizard({
           return;
         }
         clearDraftIdFromStorage();
-        router.push("/ai-digital");
+        router.push(
+          `/ai-digital?employee=${encodeURIComponent(result.employeeId)}`,
+        );
         router.refresh();
       } catch {
         setError("Deploy failed. Try again.");
@@ -203,20 +205,17 @@ export function CreateEmployeeWizard({
         ) : null}
 
         {step === 0 ? (
-          <RoleSelector
-            value={role}
+          <RoleAndAppearanceStep
+            appearanceDescription={avatarPlaceholder}
+            onAppearanceChange={setAvatarPlaceholder}
+            role={role}
             customTitle={roleCustomTitle}
-            onChange={setRole}
+            onRoleChange={setRole}
             onCustomTitleChange={setRoleCustomTitle}
           />
         ) : null}
         {step === 1 ? (
-          <IdentityForm
-            name={name}
-            onNameChange={setName}
-            avatarPlaceholder={avatarPlaceholder}
-            onAvatarPlaceholderChange={setAvatarPlaceholder}
-          />
+          <IdentityForm name={name} onNameChange={setName} />
         ) : null}
         {step === 2 ? (
           <BehaviorForm

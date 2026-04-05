@@ -13,13 +13,9 @@ function initials(name: string) {
 export function IdentityForm({
   name,
   onNameChange,
-  avatarPlaceholder,
-  onAvatarPlaceholderChange,
 }: {
   name: string;
   onNameChange: (v: string) => void;
-  avatarPlaceholder: string;
-  onAvatarPlaceholderChange: (v: string) => void;
 }) {
   const display = name.trim() || "Name";
 
@@ -47,22 +43,6 @@ export function IdentityForm({
             identity.
           </p>
         </div>
-      </div>
-
-      <div className="space-y-2 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
-        <Label htmlFor="avatar-ph" className="text-neutral-300">
-          Avatar note (optional)
-        </Label>
-        <Input
-          id="avatar-ph"
-          value={avatarPlaceholder}
-          onChange={(e) => onAvatarPlaceholderChange(e.target.value)}
-          placeholder="e.g. gradient / photo URL later"
-          className="border-neutral-800 bg-neutral-950 text-neutral-200"
-        />
-        <p className="text-xs text-neutral-500">
-          Placeholder only — image upload comes in a later release.
-        </p>
       </div>
     </div>
   );

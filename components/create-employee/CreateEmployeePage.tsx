@@ -12,7 +12,7 @@ export async function CreateEmployeePage() {
       <AppHeader
         compact
         title="Create Employee"
-        subtitle="Role, identity, behavior, then deploy."
+        subtitle="Look and role, then name, behavior, and deploy — opens AI Digital on your new employee."
       />
       <CreateEmployeeWizard avatarPreviewGenerateEnabled={avatarPreviewGenerateEnabled} />
     </div>

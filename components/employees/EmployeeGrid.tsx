@@ -33,13 +33,27 @@ function filterEmployees(
 
 export function EmployeeGrid({
   employees = [],
+  highlightEmployeeId = null,
 }: {
   employees?: EmployeeDTO[];
+  /** From `/ai-digital?employee=<id>` after deploy — scrolls card into view. */
+  highlightEmployeeId?: string | null;
 }) {
   const list = employees ?? [];
 
   const [search, setSearch] = React.useState("");
   const [role, setRole] = React.useState<string>("All");
+
+  React.useEffect(() => {
+    const id = highlightEmployeeId?.trim();
+    if (!id) return;
+    const t = window.setTimeout(() => {
+      document
+        .getElementById(`employee-card-${id}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+    return () => window.clearTimeout(t);
+  }, [highlightEmployeeId, list]);
 
   const items = ROLE_FILTERS.map((r) => ({
     value: r,
@@ -70,7 +84,14 @@ export function EmployeeGrid({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((employee) => (
-          <EmployeeCard key={employee.id} employee={employee} />
+          <EmployeeCard
+            key={employee.id}
+            employee={employee}
+            highlight={
+              Boolean(highlightEmployeeId?.trim()) &&
+              employee.id === highlightEmployeeId?.trim()
+            }
+          />
         ))}
       </div>
     </div>

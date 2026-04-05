@@ -21,7 +21,13 @@ function isMiraCatalogPreviewName(name: string): boolean {
   return /\bmira\b/.test(n);
 }
 
-export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
+export function EmployeeCard({
+  employee,
+  highlight = false,
+}: {
+  employee: EmployeeDTO;
+  highlight?: boolean;
+}) {
   const name = employee.name;
   const videoSrc = employee.videoPreview?.src?.trim();
   const miraFallback =
@@ -31,11 +37,16 @@ export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
   const tallMiraLayout = Boolean(miraFallback && !videoSrc);
 
   return (
-    <Link href={`/employees/${employee.id}`} className="block outline-none">
+    <Link
+      href={`/employees/${employee.id}`}
+      className="block outline-none"
+      id={`employee-card-${employee.id}`}
+    >
       <Card
         className={cn(
           "border-neutral-800 bg-neutral-950/40 transition-colors",
           "hover:border-neutral-600",
+          highlight && "ring-2 ring-emerald-500/50 ring-offset-2 ring-offset-neutral-950",
         )}
       >
         <div

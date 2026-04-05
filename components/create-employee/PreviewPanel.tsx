@@ -174,7 +174,7 @@ export function PreviewPanel({
         </div>
         {avatarPlaceholder.trim() ? (
           <p className="text-xs text-neutral-500">
-            Avatar note: {avatarPlaceholder.trim()}
+            Video look: {avatarPlaceholder.trim()}
           </p>
         ) : null}
       </div>
