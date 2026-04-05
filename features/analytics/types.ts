@@ -22,8 +22,24 @@ export type AnalyticsDashboardDTO = {
   workforceLevel: {
     level: number;
     tierName: string;
+    /**
+     * Progress within the current tier toward the next level (0–99).
+     * When `atMaxTier` is true, ignore this for “next level” UX.
+     */
     progressPct: number;
+    atMaxTier: boolean;
+    nextTierName: string | null;
+    rollingWindowDays: number;
+    sessionsPerTier: number;
+    /** Distinct `ai_sessions` started in the rolling window (same basis as KPI). */
+    sessionsInWindow: number;
+    /** Position inside the current tier band (`sessionsInWindow % sessionsPerTier`). */
+    sessionsInCurrentTier: number;
+    /** Sessions remaining until the next tier; 0 when `atMaxTier`. */
+    sessionsToNextTier: number;
     hint: string;
+    /** Populated in development only — tuning / env mapping. */
+    devHint?: string;
   };
   employees: Array<{
     employeeId: string;
@@ -47,9 +63,15 @@ export type AnalyticsDashboardDTO = {
     sessionsCount: number;
   }>;
   businessImpact: {
-    aiHandledTasks: number;
-    equivalentFte: number;
+    /** Distinct workspace (transcript) sessions in the rolling window. */
+    workspaceSessions30d: number;
+    /** Illustrative FTE from session volume ÷ divisor (not headcount). */
+    modeledFte: number;
     costSavedUsd: number;
     narrative: string;
+    disclaimer: string;
+    /** Divisor used for modeled FTE (env-tunable). */
+    sessionsPerModeledFte: number;
+    rollingWindowDays: number;
   };
 };

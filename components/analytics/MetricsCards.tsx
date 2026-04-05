@@ -50,14 +50,16 @@ function buildMetrics(kpis: AnalyticsDashboardDTO["kpis"]) {
     {
       title: "Cost saved",
       value: formatCostUsd(kpis.costSavedUsd),
-      description: "Estimated from telemetry (see env formula)",
+      description:
+        "Sum of per-session savings fields on workspace sessions (shown as USD).",
       trend: pctVsPrior30d(kpis.costSavedTrendPct),
       period: "Last 30d",
     },
     {
-      title: "Transcript sessions",
+      title: "Workspace sessions",
       value: kpis.sessionsHandled.toLocaleString(),
-      description: "Distinct client transcript sessions with activity (30d)",
+      description:
+        "Distinct AI workspace sessions started in the rolling window (telemetry).",
       trend: pctVsPrior30d(kpis.sessionsTrendPct),
       period: "Last 30d",
     },
@@ -72,7 +74,8 @@ function buildMetrics(kpis: AnalyticsDashboardDTO["kpis"]) {
     {
       title: "Efficiency gain",
       value: `+${kpis.efficiencyGainPct.toFixed(1)}%`,
-      description: "Turn success vs ANALYTICS_BASELINE_SUCCESS_PCT (default 85%)",
+      description:
+        "Chat turn success rate vs. a configured baseline (default 85% on server).",
       trend: efficiencyPtsVsPrior(kpis.efficiencyTrendPts),
       period: "Last 30d",
     },
