@@ -312,7 +312,7 @@ async function executeToolCall(
       const slice = rows.slice(0, limit).map((r) => ({
         id: r.id,
         name: r.name,
-        role: r.role_category,
+        role: r.role_label,
       }));
       return JSON.stringify({ count: rows.length, employees: slice });
     }

@@ -65,7 +65,7 @@ export function EmployeeCard({ employee }: { employee: EmployeeDTO }) {
           </div>
         </CardHeader>
         <CardContent className="pt-0 text-xs text-neutral-500">
-          {employee.roleCategory}
+          {employee.roleLabel}
         </CardContent>
       </Card>
     </Link>

@@ -95,11 +95,17 @@ export async function POST(req: Request) {
 
   const clientChatSessionId = body?.clientChatSessionId?.trim() ?? "";
   const cfg = (row.config ?? {}) as EmployeeConfigJson;
+  const roleLabel =
+    row.role === "Other" &&
+    typeof cfg.roleCustomTitle === "string" &&
+    cfg.roleCustomTitle.trim()
+      ? cfg.roleCustomTitle.trim()
+      : row.role;
 
   const started = Date.now();
   const result = await runEmployeeOpenAiChatTurn({
     name: row.name,
-    role: row.role,
+    role: roleLabel,
     config: cfg,
     messages,
     userId,

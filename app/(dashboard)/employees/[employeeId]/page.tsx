@@ -97,7 +97,7 @@ export default async function EmployeeDetailPage({
         bootstrap={bootstrap}
         employeeId={employeeId}
         displayName={employee.name}
-        roleLabel={employee.roleCategory}
+        roleLabel={employee.roleLabel}
         openAiChatEnabled={openAiChatEnabled}
         realtimeVoiceEnabled={realtimeVoiceEnabled}
         avatarPreviewGenerateEnabled={avatarPreviewGenerateEnabled}

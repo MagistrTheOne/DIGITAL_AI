@@ -11,7 +11,7 @@ import type {
   InteractionMessage,
   VoiceUiState,
 } from "@/components/employee-interaction/types";
-import { AvatarPreviewGenerateControl } from "@/components/employee-interaction/AvatarPreviewGenerateControl";
+import { AvatarPreviewSection } from "@/components/employee-interaction/AvatarPreviewSection";
 import { VoiceControlButton } from "@/components/employee-interaction/VoiceControlButton";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -60,6 +60,12 @@ export function EmployeeInteractionPage({
   /** Server: ARACHNE_AVATAR_PREVIEW_URL set — show “Generate preview” (LongCat / worker on ARACHNE). */
   avatarPreviewGenerateEnabled?: boolean;
 }) {
+  const avatarPreviewVisible =
+    avatarPreviewGenerateEnabled ||
+    bootstrap.employee.avatarPreview?.renderStatus === "generating" ||
+    bootstrap.employee.avatarPreview?.renderStatus === "failed" ||
+    Boolean(bootstrap.employee.videoPreview?.src);
+
   const avatarBootstrap = React.useMemo(() => toAvatarBootstrap(bootstrap), [bootstrap]);
 
   const {
@@ -416,9 +422,16 @@ export function EmployeeInteractionPage({
               bootstrap.realtime.ok ? subscribeEvents : undefined
             }
           />
-          <AvatarPreviewGenerateControl
+          <AvatarPreviewSection
             employeeId={employeeId}
-            enabled={avatarPreviewGenerateEnabled}
+            visible={avatarPreviewVisible}
+            generateEnabled={avatarPreviewGenerateEnabled}
+            initialRenderStatus={
+              bootstrap.employee.avatarPreview?.renderStatus ?? "idle"
+            }
+            initialVideoUrl={bootstrap.employee.videoPreview?.src ?? null}
+            initialJobId={bootstrap.employee.avatarPreview?.jobId ?? null}
+            initialError={bootstrap.employee.avatarPreview?.error ?? null}
           />
           <VoiceControlButton
             state={voiceState}

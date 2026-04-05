@@ -1,9 +1,12 @@
+import type { RenderStatus } from "./avatar-preview.types";
+
 export type EmployeeRoleCategory =
   | "CFO"
   | "Marketing"
   | "Operations"
   | "Product"
-  | "Customer Support";
+  | "Customer Support"
+  | "Other";
 
 export type EmployeeRoleFilter = "All" | EmployeeRoleCategory;
 
@@ -16,25 +19,37 @@ export type EmployeeVideoPreview = {
   type?: string;
 };
 
+export type EmployeeAvatarPreviewState = {
+  renderStatus: RenderStatus;
+  jobId: string | null;
+  error: string | null;
+};
+
 export type EmployeeDTO = {
   id: EmployeeId;
   name: string;
   roleCategory: EmployeeRoleCategory;
+  /** Human-readable role (custom title when role is Other). */
+  roleLabel: string;
   verified: boolean;
   capabilities: EmployeeCapability[];
   videoPreview?: EmployeeVideoPreview;
+  avatarPreview?: EmployeeAvatarPreviewState;
 };
 
 export type EmployeeListQuery = {
   /** Tenant scope — required for listing. */
   userId: string;
   q?: string;
+  /** Filter by persisted `employees.role` (Other = custom job titles). */
   role?: EmployeeRoleFilter;
 };
 
-/** Input for BFF `createEmployee` (onboarding wizard). */
+/** Input for BFF `createEmployee` / finalize draft (onboarding wizard). */
 export type CreateEmployeeInput = {
   role: EmployeeRoleCategory;
+  /** Required when `role === "Other"` (trimmed, min length enforced server-side). */
+  roleCustomTitle?: string;
   name: string;
   avatarPlaceholder?: string;
   prompt: string;

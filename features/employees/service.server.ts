@@ -11,10 +11,15 @@ import { getPlanForUser } from "@/services/db/repositories/billing.repository";
 import {
   countEmployeesForUser,
   getEmployeeById,
+  getEmployeeRowById,
   insertEmployeeRow,
   listEmployeesByQuery,
+  updateEmployeeRow,
+  type EmployeeConfigJson,
+  type EmployeeRecord,
 } from "@/services/db/repositories/employees.repository";
 import { mintArachneSessionForEmployee } from "@/features/arachine-x/server/arachneAvatarBootstrap.server";
+import { enqueueRunPodAvatarJobIfConfigured } from "@/lib/inference/runpod-avatar.server";
 
 function toRoleCategory(role: string): EmployeeRoleCategory {
   switch (role) {
@@ -23,29 +28,29 @@ function toRoleCategory(role: string): EmployeeRoleCategory {
     case "Operations":
     case "Product":
     case "Customer Support":
+    case "Other":
       return role;
     default:
       return "Operations";
   }
 }
 
-function recordToEmployeeDTO(r: {
-  id: string;
-  name: string;
-  role_category: string;
-  verified: boolean;
-  capabilities: string[];
-  video_preview_url: string | null;
-}): EmployeeDTO {
+function recordToEmployeeDTO(r: EmployeeRecord): EmployeeDTO {
   return {
     id: r.id,
     name: r.name,
     roleCategory: toRoleCategory(r.role_category),
+    roleLabel: r.role_label,
     verified: r.verified,
     capabilities: r.capabilities,
     videoPreview: r.video_preview_url
       ? { src: r.video_preview_url, type: "video/mp4" }
       : undefined,
+    avatarPreview: {
+      renderStatus: r.avatar_render_status,
+      jobId: r.avatar_preview_job_id,
+      error: r.avatar_preview_error,
+    },
   };
 }
 
@@ -61,6 +66,39 @@ function ensureVantageName(raw: string): string {
   const t = raw.trim();
   if (!t) return "Agent Vantage";
   return t.toLowerCase().endsWith("vantage") ? t : `${t} Vantage`;
+}
+
+function validateRoleInput(
+  input: CreateEmployeeInput,
+): { ok: true } | { ok: false; error: string } {
+  if (input.role === "Other") {
+    const t = input.roleCustomTitle?.trim() ?? "";
+    if (t.length < 2) {
+      return { ok: false, error: "Enter a job title (at least 2 characters)." };
+    }
+    if (t.length > 80) {
+      return { ok: false, error: "Job title is too long (max 80 characters)." };
+    }
+  }
+  return { ok: true };
+}
+
+function dbRoleFromInput(input: CreateEmployeeInput): string {
+  return input.role === "Other" ? "Other" : input.role;
+}
+
+function employeeConfigFromWizard(input: CreateEmployeeInput): EmployeeConfigJson {
+  const base: EmployeeConfigJson = {
+    prompt: input.prompt,
+    capabilities: input.capabilities,
+    avatarPlaceholder: input.avatarPlaceholder ?? null,
+    promptTemplateVersion: 1,
+    roleCustomTitle:
+      input.role === "Other"
+        ? (input.roleCustomTitle ?? "").trim()
+        : null,
+  };
+  return base;
 }
 
 /** Session-scoped list for AI Digital (server components only). */
@@ -111,8 +149,14 @@ export async function getEmployeeSessionBootstrap(
       id: employeeId,
       name: "Unknown Employee",
       roleCategory: "Operations",
+      roleLabel: "Operations",
       verified: false,
       capabilities: [],
+      avatarPreview: {
+        renderStatus: "idle",
+        jobId: null,
+        error: null,
+      },
     };
 
   const sessionId = crypto.randomUUID();
@@ -159,7 +203,7 @@ export async function getEmployeeSessionBootstrap(
 }
 
 /**
- * Create a new AI employee — plan cap enforced before insert.
+ * Create a new AI employee — plan cap enforced before insert (active rows only).
  */
 export async function createEmployee(
   input: CreateEmployeeInput,
@@ -167,6 +211,9 @@ export async function createEmployee(
   const session = await getCurrentSession();
   const userId = session?.user?.id;
   if (!userId) return { ok: false, error: "Unauthorized" };
+
+  const roleCheck = validateRoleInput(input);
+  if (!roleCheck.ok) return roleCheck;
 
   const plan = await getPlanForUser(userId);
   const maxEmployees = plan.limits.employees;
@@ -184,16 +231,131 @@ export async function createEmployee(
     const { id } = await insertEmployeeRow({
       userId,
       name,
-      role: input.role,
+      role: dbRoleFromInput(input),
       status: "active",
-      config: {
-        prompt: input.prompt,
-        capabilities: input.capabilities,
-        avatarPlaceholder: input.avatarPlaceholder ?? null,
-      },
+      config: employeeConfigFromWizard(input),
     });
 
+    void enqueueRunPodAvatarJobIfConfigured({ employeeId: id, userId });
+
     return { ok: true, employeeId: id };
+  } catch (err) {
+    if (isPostgresMissingRelationError(err)) {
+      return {
+        ok: false,
+        error:
+          "Database is missing the employees table. From the project root run: npm run db:push (uses DATABASE_URL from .env.local).",
+      };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Ensure a draft row exists before the Preview step (step 2 → 3). Plan cap not applied.
+ */
+export async function ensureDraftEmployee(
+  input: CreateEmployeeInput,
+  draftEmployeeId: string | null,
+): Promise<{ ok: true; employeeId: string } | { ok: false; error: string }> {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  if (!userId) return { ok: false, error: "Unauthorized" };
+
+  const roleCheck = validateRoleInput(input);
+  if (!roleCheck.ok) return roleCheck;
+
+  const name = ensureVantageName(input.name);
+  const config = employeeConfigFromWizard(input);
+  const role = dbRoleFromInput(input);
+
+  try {
+    if (draftEmployeeId?.trim()) {
+      const row = await getEmployeeRowById(draftEmployeeId.trim(), userId);
+      if (!row) return { ok: false, error: "Draft not found." };
+      if (row.status !== "draft") {
+        return { ok: false, error: "This employee is no longer a draft." };
+      }
+      await updateEmployeeRow({
+        employeeId: draftEmployeeId.trim(),
+        userId,
+        name,
+        role,
+        config,
+      });
+      return { ok: true, employeeId: draftEmployeeId.trim() };
+    }
+
+    const { id } = await insertEmployeeRow({
+      userId,
+      name,
+      role,
+      status: "draft",
+      config,
+    });
+    return { ok: true, employeeId: id };
+  } catch (err) {
+    if (isPostgresMissingRelationError(err)) {
+      return {
+        ok: false,
+        error:
+          "Database is missing the employees table. From the project root run: npm run db:push (uses DATABASE_URL from .env.local).",
+      };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Finalize draft → active, enforce plan cap, enqueue RunPod avatar job when configured.
+ */
+export async function finalizeDraftEmployee(
+  draftEmployeeId: string,
+  input: CreateEmployeeInput,
+): Promise<{ ok: true; employeeId: string } | { ok: false; error: string }> {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  if (!userId) return { ok: false, error: "Unauthorized" };
+
+  const roleCheck = validateRoleInput(input);
+  if (!roleCheck.ok) return roleCheck;
+
+  const row = await getEmployeeRowById(draftEmployeeId.trim(), userId);
+  if (!row) return { ok: false, error: "Draft not found." };
+  if (row.status !== "draft") {
+    return { ok: false, error: "This employee is already deployed." };
+  }
+
+  const plan = await getPlanForUser(userId);
+  const maxEmployees = plan.limits.employees;
+  const current = await countEmployeesForUser(userId);
+  if (maxEmployees !== -1 && current >= maxEmployees) {
+    return {
+      ok: false,
+      error: `Your ${plan.label} plan allows up to ${maxEmployees} AI employees. Upgrade to add more.`,
+    };
+  }
+
+  const name = ensureVantageName(input.name);
+  const config = employeeConfigFromWizard(input);
+  const role = dbRoleFromInput(input);
+
+  try {
+    await updateEmployeeRow({
+      employeeId: draftEmployeeId.trim(),
+      userId,
+      name,
+      role,
+      status: "active",
+      config,
+    });
+
+    void enqueueRunPodAvatarJobIfConfigured({
+      employeeId: draftEmployeeId.trim(),
+      userId,
+    });
+
+    return { ok: true, employeeId: draftEmployeeId.trim() };
   } catch (err) {
     if (isPostgresMissingRelationError(err)) {
       return {

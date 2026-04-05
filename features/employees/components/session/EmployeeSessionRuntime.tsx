@@ -19,7 +19,7 @@ function AvatarStagePlaceholder({
           <div className="text-sm text-muted-foreground">Avatar</div>
           <div className="text-lg font-semibold">{bootstrap.employee.name}</div>
           <div className="text-xs text-muted-foreground">
-            {bootstrap.employee.roleCategory} · {bootstrap.employee.verified ? "Verified" : "Unverified"}
+            {bootstrap.employee.roleLabel} · {bootstrap.employee.verified ? "Verified" : "Unverified"}
           </div>
         </div>
 

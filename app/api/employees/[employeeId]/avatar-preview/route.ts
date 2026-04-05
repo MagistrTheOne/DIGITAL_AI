@@ -5,6 +5,7 @@ import { getCurrentSession } from "@/lib/auth/session.server";
 import {
   getEmployeeRowById,
   type EmployeeConfigJson,
+  updateEmployeeAvatarPreviewState,
   updateEmployeeVideoPreviewUrl,
 } from "@/services/db/repositories/employees.repository";
 
@@ -43,8 +44,7 @@ export async function POST(
   }
 
   const cfg = (row.config ?? {}) as EmployeeConfigJson;
-  const promptHint =
-    typeof cfg.prompt === "string" ? cfg.prompt : undefined;
+  const promptHint = typeof cfg.prompt === "string" ? cfg.prompt : undefined;
 
   const preview = await requestArachneAvatarPreview({
     employeeId,
@@ -60,7 +60,11 @@ export async function POST(
     if (missingEndpoint) {
       return NextResponse.json({ error: preview.error }, { status: 503 });
     }
-    // Always 502 for ARACHNE failures so the browser is not confused with "this Next route does not exist" (404).
+    await updateEmployeeAvatarPreviewState(employeeId, userId, {
+      avatarRenderStatus: "failed",
+      avatarPreviewError: preview.error,
+      avatarPreviewJobId: null,
+    });
     return NextResponse.json(
       {
         error: preview.error,
@@ -68,6 +72,18 @@ export async function POST(
       },
       { status: 502 },
     );
+  }
+
+  if (preview.mode === "async") {
+    const saved = await updateEmployeeAvatarPreviewState(employeeId, userId, {
+      avatarRenderStatus: "generating",
+      avatarPreviewJobId: preview.jobId,
+      avatarPreviewError: null,
+    });
+    if (!saved) {
+      return NextResponse.json({ error: "Failed to save job state" }, { status: 500 });
+    }
+    return NextResponse.json({ jobId: preview.jobId }, { status: 202 });
   }
 
   const updated = await updateEmployeeVideoPreviewUrl(
@@ -79,5 +95,5 @@ export async function POST(
     return NextResponse.json({ error: "Failed to save preview URL" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, videoUrl: preview.videoUrl });
+  return NextResponse.json({ videoUrl: preview.videoUrl }, { status: 200 });
 }

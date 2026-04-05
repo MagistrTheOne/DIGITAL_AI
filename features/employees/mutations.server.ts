@@ -14,11 +14,17 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
     id: `emp_${Date.now()}`,
     name: input.name,
     roleCategory: input.roleCategory,
+    roleLabel: input.roleCategory,
     verified: input.verified ?? false,
     capabilities: [],
     videoPreview: input.videoPreviewSrc
       ? { src: input.videoPreviewSrc, type: "video/mp4" }
       : undefined,
+    avatarPreview: {
+      renderStatus: "idle",
+      jobId: null,
+      error: null,
+    },
   };
 }
 

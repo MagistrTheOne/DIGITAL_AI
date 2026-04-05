@@ -8,4 +8,5 @@ export const ROLE_FILTERS: Array<"All" | EmployeeRoleCategory> = [
   "Operations",
   "Product",
   "Customer Support",
+  "Other",
 ];

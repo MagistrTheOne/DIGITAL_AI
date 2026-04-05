@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, ne, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { employee } from "@/db/schema";
 
+import type { RenderStatus } from "@/features/employees/avatar-preview.types";
 import type {
   EmployeeId,
   EmployeeListQuery,
@@ -15,9 +16,14 @@ export type EmployeeRecord = {
   id: EmployeeId;
   name: string;
   role_category: string;
+  /** Shown in UI: custom job title when role column is Other. */
+  role_label: string;
   verified: boolean;
   video_preview_url: string | null;
   capabilities: string[];
+  avatar_render_status: RenderStatus;
+  avatar_preview_job_id: string | null;
+  avatar_preview_error: string | null;
 };
 
 export type EmployeeConfigJson = {
@@ -25,25 +31,55 @@ export type EmployeeConfigJson = {
   capabilities?: string[];
   avatarPlaceholder?: string | null;
   videoPreviewUrl?: string | null;
+  roleCustomTitle?: string | null;
+  avatarRenderStatus?: RenderStatus | null;
+  avatarPreviewJobId?: string | null;
+  avatarPreviewError?: string | null;
+  avatarGenerationRequestedAt?: string | null;
+  promptTemplateVersion?: number;
+  renderProfile?: Record<string, unknown>;
 };
+
+function defaultRenderStatus(cfg: EmployeeConfigJson): RenderStatus {
+  if (cfg.avatarRenderStatus === "generating") return "generating";
+  if (cfg.avatarRenderStatus === "failed") return "failed";
+  if (cfg.avatarRenderStatus === "ready") return "ready";
+  if (cfg.avatarRenderStatus === "idle") return "idle";
+  if (typeof cfg.videoPreviewUrl === "string" && cfg.videoPreviewUrl.length > 0) {
+    return "ready";
+  }
+  return "idle";
+}
 
 function mapRow(r: typeof employee.$inferSelect): EmployeeRecord {
   const cfg = (r.config ?? {}) as EmployeeConfigJson;
   const caps = Array.isArray(cfg.capabilities)
     ? cfg.capabilities.filter((x): x is string => typeof x === "string")
     : [];
+  const videoUrl =
+    typeof cfg.videoPreviewUrl === "string" ? cfg.videoPreviewUrl : null;
+  const roleLabel =
+    r.role === "Other" && typeof cfg.roleCustomTitle === "string" && cfg.roleCustomTitle.trim()
+      ? cfg.roleCustomTitle.trim()
+      : r.role;
+
   return {
     id: r.id,
     name: r.name,
     role_category: r.role,
+    role_label: roleLabel,
     verified: r.status === "active",
-    video_preview_url:
-      typeof cfg.videoPreviewUrl === "string" ? cfg.videoPreviewUrl : null,
+    video_preview_url: videoUrl,
     capabilities: caps,
+    avatar_render_status: defaultRenderStatus(cfg),
+    avatar_preview_job_id:
+      typeof cfg.avatarPreviewJobId === "string" ? cfg.avatarPreviewJobId : null,
+    avatar_preview_error:
+      typeof cfg.avatarPreviewError === "string" ? cfg.avatarPreviewError : null,
   };
 }
 
-/** All employees for a user (ordered by name). */
+/** All employees for a user (ordered by name), excluding drafts. */
 export async function listEmployeesByUser(
   userId: string,
 ): Promise<EmployeeRecord[]> {
@@ -53,7 +89,7 @@ export async function listEmployeesByUser(
     const rows = await db
       .select()
       .from(employee)
-      .where(eq(employee.userId, userId))
+      .where(and(eq(employee.userId, userId), ne(employee.status, "draft")))
       .orderBy(employee.name);
 
     return rows.map(mapRow);
@@ -75,7 +111,11 @@ export async function listEmployeesByQuery(
 
   const q = query.q?.trim().toLowerCase();
   if (q) {
-    out = out.filter((r) => r.name.toLowerCase().includes(q));
+    out = out.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.role_label.toLowerCase().includes(q),
+    );
   }
 
   return out.slice(0, 60);
@@ -122,32 +162,49 @@ export async function getEmployeeRowById(
   }
 }
 
+/** Count **active** employees only (excludes draft) — used for plan limits. */
 export async function countEmployeesForUser(userId: string): Promise<number> {
   try {
     const [row] = await db
       .select({ c: count() })
       .from(employee)
-      .where(eq(employee.userId, userId));
+      .where(and(eq(employee.userId, userId), eq(employee.status, "active")));
     return Number(row?.c ?? 0);
   } catch {
     return 0;
   }
 }
 
-/** Merge `videoPreviewUrl` into employee `config` (e.g. after ARACHNE LongCat / media worker). */
-export async function updateEmployeeVideoPreviewUrl(
+export type AvatarPreviewStatePatch = {
+  avatarRenderStatus?: RenderStatus | null;
+  avatarPreviewJobId?: string | null;
+  avatarPreviewError?: string | null;
+  videoPreviewUrl?: string | null;
+};
+
+export async function updateEmployeeAvatarPreviewState(
   employeeId: EmployeeId,
   userId: string,
-  videoPreviewUrl: string,
+  patch: AvatarPreviewStatePatch,
 ): Promise<boolean> {
   const row = await getEmployeeRowById(employeeId, userId);
   if (!row) return false;
 
   const prev = (row.config ?? {}) as EmployeeConfigJson;
-  const config: EmployeeConfigJson = {
-    ...prev,
-    videoPreviewUrl: videoPreviewUrl.trim(),
-  };
+  const config: EmployeeConfigJson = { ...prev };
+
+  if (patch.avatarRenderStatus !== undefined) {
+    config.avatarRenderStatus = patch.avatarRenderStatus ?? undefined;
+  }
+  if (patch.avatarPreviewJobId !== undefined) {
+    config.avatarPreviewJobId = patch.avatarPreviewJobId;
+  }
+  if (patch.avatarPreviewError !== undefined) {
+    config.avatarPreviewError = patch.avatarPreviewError;
+  }
+  if (patch.videoPreviewUrl !== undefined) {
+    config.videoPreviewUrl = patch.videoPreviewUrl;
+  }
 
   await db
     .update(employee)
@@ -158,6 +215,42 @@ export async function updateEmployeeVideoPreviewUrl(
     .where(and(eq(employee.id, employeeId), eq(employee.userId, userId)));
 
   return true;
+}
+
+/** Merge `videoPreviewUrl` and mark preview ready (sync path). */
+export async function updateEmployeeVideoPreviewUrl(
+  employeeId: EmployeeId,
+  userId: string,
+  videoPreviewUrl: string,
+): Promise<boolean> {
+  return updateEmployeeAvatarPreviewState(employeeId, userId, {
+    videoPreviewUrl: videoPreviewUrl.trim(),
+    avatarRenderStatus: "ready",
+    avatarPreviewJobId: null,
+    avatarPreviewError: null,
+  });
+}
+
+export async function findEmployeeRowByPreviewJobId(
+  userId: string,
+  jobId: string,
+): Promise<typeof employee.$inferSelect | null> {
+  if (!userId || !jobId.trim()) return null;
+  try {
+    const [row] = await db
+      .select()
+      .from(employee)
+      .where(
+        and(
+          eq(employee.userId, userId),
+          sql`${employee.config}->>'avatarPreviewJobId' = ${jobId}`,
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function insertEmployeeRow(input: {
@@ -182,4 +275,36 @@ export async function insertEmployeeRow(input: {
   });
 
   return { id };
+}
+
+export async function updateEmployeeRow(input: {
+  employeeId: EmployeeId;
+  userId: string;
+  name?: string;
+  role?: string;
+  status?: string;
+  config?: Partial<EmployeeConfigJson>;
+}): Promise<boolean> {
+  const row = await getEmployeeRowById(input.employeeId, input.userId);
+  if (!row) return false;
+
+  const prev = (row.config ?? {}) as EmployeeConfigJson;
+  const nextConfig: EmployeeConfigJson = input.config
+    ? { ...prev, ...input.config }
+    : prev;
+
+  await db
+    .update(employee)
+    .set({
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.role !== undefined ? { role: input.role } : {}),
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      config: nextConfig as Record<string, unknown>,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(eq(employee.id, input.employeeId), eq(employee.userId, input.userId)),
+    );
+
+  return true;
 }

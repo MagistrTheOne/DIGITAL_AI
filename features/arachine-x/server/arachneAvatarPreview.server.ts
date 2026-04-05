@@ -1,7 +1,6 @@
 /**
  * Optional ARACHNE-X (or worker) hook for talking-head / avatar preview video.
- * Inference (e.g. LongCat-Video-Avatar on GPU) runs on the ARACHNE side, not in Next.
- * @see https://huggingface.co/meituan-longcat/LongCat-Video-Avatar
+ * Inference runs on the ARACHNE / GPU side, not in Next.
  */
 
 export type ArachneAvatarPreviewInput = {
@@ -14,7 +13,8 @@ export type ArachneAvatarPreviewInput = {
 };
 
 export type ArachneAvatarPreviewResult =
-  | { ok: true; videoUrl: string }
+  | { ok: true; mode: "sync"; videoUrl: string }
+  | { ok: true; mode: "async"; jobId: string }
   | { ok: false; error: string; status?: number };
 
 function getServiceKeyHeader(): Record<string, string> {
@@ -23,9 +23,9 @@ function getServiceKeyHeader(): Record<string, string> {
 }
 
 /**
- * POST to `ARACHNE_AVATAR_PREVIEW_URL` when your backend exposes a preview job
- * (wraps LongCat or another avatar pipeline). Response JSON must include one of:
- * `videoUrl` | `previewUrl` | `url` (absolute https URL to an mp4/webm).
+ * POST to `ARACHNE_AVATAR_PREVIEW_URL`. Response JSON may include:
+ * - Async: `jobId` (starts job; poll separately)
+ * - Sync: `videoUrl` | `previewUrl` | `url` (absolute https URL to mp4/webm)
  */
 export async function requestArachneAvatarPreview(
   input: ArachneAvatarPreviewInput,
@@ -100,6 +100,11 @@ export async function requestArachneAvatarPreview(
     }
 
     const o = json as Record<string, unknown>;
+    const jobIdRaw = o.jobId;
+    if (typeof jobIdRaw === "string" && jobIdRaw.trim().length > 0) {
+      return { ok: true, mode: "async", jobId: jobIdRaw.trim() };
+    }
+
     const videoUrl =
       (typeof o.videoUrl === "string" && o.videoUrl) ||
       (typeof o.previewUrl === "string" && o.previewUrl) ||
@@ -110,12 +115,12 @@ export async function requestArachneAvatarPreview(
       return {
         ok: false,
         error:
-          "Preview response must include videoUrl, previewUrl, or url with an http(s) URL",
+          "Preview response must include jobId or videoUrl / previewUrl / url with an http(s) URL",
         status: res.status,
       };
     }
 
-    return { ok: true, videoUrl };
+    return { ok: true, mode: "sync", videoUrl };
   } catch (e) {
     const message =
       e instanceof Error ? e.message : "Network error calling avatar preview";

@@ -23,7 +23,7 @@ function filterEmployees(
       const full = e.name.toLowerCase();
       return (
         full.includes(needle) ||
-        e.roleCategory.toLowerCase().includes(needle) ||
+        e.roleLabel.toLowerCase().includes(needle) ||
         e.id.toLowerCase().includes(needle)
       );
     });

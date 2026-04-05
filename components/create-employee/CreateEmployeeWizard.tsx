@@ -14,8 +14,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { submitCreateEmployeeAction } from "@/features/employees/actions";
-import type { EmployeeRoleCategory } from "@/features/employees/types";
+import {
+  ensureDraftEmployeeAction,
+  finalizeDraftEmployeeAction,
+  submitCreateEmployeeAction,
+} from "@/features/employees/actions";
+import type { CreateEmployeeInput, EmployeeRoleCategory } from "@/features/employees/types";
 
 import { BehaviorForm } from "@/components/create-employee/BehaviorForm";
 import { IdentityForm } from "@/components/create-employee/IdentityForm";
@@ -24,18 +28,79 @@ import { RoleSelector } from "@/components/create-employee/RoleSelector";
 import { Stepper } from "@/components/create-employee/Stepper";
 
 const TOTAL_STEPS = 4;
+const DRAFT_STORAGE_KEY = "nullxes.createEmployee.draftId";
 
-export function CreateEmployeeWizard() {
+function readDraftIdFromStorage(): string | null {
+  try {
+    return sessionStorage.getItem(DRAFT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeDraftIdToStorage(id: string) {
+  try {
+    sessionStorage.setItem(DRAFT_STORAGE_KEY, id);
+  } catch {
+    /* private mode */
+  }
+}
+
+function clearDraftIdFromStorage() {
+  try {
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    /* private mode */
+  }
+}
+
+function previewRoleLabel(
+  role: EmployeeRoleCategory | null,
+  customTitle: string,
+): string {
+  if (!role) return "";
+  if (role === "Other") return customTitle.trim() || "Other";
+  return role;
+}
+
+export function CreateEmployeeWizard({
+  avatarPreviewGenerateEnabled,
+}: {
+  avatarPreviewGenerateEnabled: boolean;
+}) {
   const router = useRouter();
   const [step, setStep] = React.useState(0);
   const [pending, startTransition] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
 
   const [role, setRole] = React.useState<EmployeeRoleCategory | null>(null);
+  const [roleCustomTitle, setRoleCustomTitle] = React.useState("");
   const [name, setName] = React.useState("");
   const [avatarPlaceholder, setAvatarPlaceholder] = React.useState("");
   const [prompt, setPrompt] = React.useState("");
   const [capabilities, setCapabilities] = React.useState<string[]>([]);
+  const [draftEmployeeId, setDraftEmployeeId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const stored = readDraftIdFromStorage();
+    if (stored) setDraftEmployeeId(stored);
+  }, []);
+
+  const buildInput = React.useCallback((): CreateEmployeeInput => {
+    if (!role) {
+      throw new Error("Role required");
+    }
+    return {
+      role,
+      ...(role === "Other"
+        ? { roleCustomTitle: roleCustomTitle.trim() }
+        : {}),
+      name: name.trim(),
+      avatarPlaceholder: avatarPlaceholder.trim() || undefined,
+      prompt: prompt.trim(),
+      capabilities,
+    };
+  }, [role, roleCustomTitle, name, avatarPlaceholder, prompt, capabilities]);
 
   const toggleCapability = React.useCallback((cap: string, checked: boolean) => {
     setCapabilities((prev) =>
@@ -44,15 +109,42 @@ export function CreateEmployeeWizard() {
   }, []);
 
   const canGoNext = React.useMemo(() => {
-    if (step === 0) return role !== null;
+    if (step === 0) {
+      if (role === null) return false;
+      if (role === "Other") return roleCustomTitle.trim().length >= 2;
+      return true;
+    }
     if (step === 1) return name.trim().length > 0;
     if (step === 2) return prompt.trim().length > 0;
     return true;
-  }, [step, role, name, prompt]);
+  }, [step, role, roleCustomTitle, name, prompt]);
 
   const goNext = () => {
     if (!canGoNext) return;
     setError(null);
+
+    if (step === 2) {
+      startTransition(async () => {
+        try {
+          const input = buildInput();
+          const res = await ensureDraftEmployeeAction(
+            input,
+            draftEmployeeId ?? readDraftIdFromStorage(),
+          );
+          if (!res.ok) {
+            setError(res.error);
+            return;
+          }
+          setDraftEmployeeId(res.employeeId);
+          writeDraftIdToStorage(res.employeeId);
+          setStep(3);
+        } catch {
+          setError("Could not save draft. Try again.");
+        }
+      });
+      return;
+    }
+
     setStep((s) => Math.min(TOTAL_STEPS - 1, s + 1));
   };
 
@@ -66,21 +158,28 @@ export function CreateEmployeeWizard() {
       setError("Complete role, name, and instructions before deploying.");
       return;
     }
+    if (role === "Other" && roleCustomTitle.trim().length < 2) {
+      setError("Enter a job title (at least 2 characters).");
+      return;
+    }
     setError(null);
     startTransition(async () => {
-      const result = await submitCreateEmployeeAction({
-        role,
-        name: name.trim(),
-        avatarPlaceholder: avatarPlaceholder.trim() || undefined,
-        prompt: prompt.trim(),
-        capabilities,
-      });
-      if (!result.ok) {
-        setError(result.error);
-        return;
+      try {
+        const input = buildInput();
+        const storedDraft = draftEmployeeId ?? readDraftIdFromStorage();
+        const result = storedDraft
+          ? await finalizeDraftEmployeeAction(storedDraft, input)
+          : await submitCreateEmployeeAction(input);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        clearDraftIdFromStorage();
+        router.push("/ai-digital");
+        router.refresh();
+      } catch {
+        setError("Deploy failed. Try again.");
       }
-      router.push("/ai-digital");
-      router.refresh();
     });
   };
 
@@ -104,7 +203,12 @@ export function CreateEmployeeWizard() {
         ) : null}
 
         {step === 0 ? (
-          <RoleSelector value={role} onChange={setRole} />
+          <RoleSelector
+            value={role}
+            customTitle={roleCustomTitle}
+            onChange={setRole}
+            onCustomTitleChange={setRoleCustomTitle}
+          />
         ) : null}
         {step === 1 ? (
           <IdentityForm
@@ -124,11 +228,13 @@ export function CreateEmployeeWizard() {
         ) : null}
         {step === 3 ? (
           <PreviewPanel
-            role={role}
+            roleLabel={previewRoleLabel(role, roleCustomTitle)}
             name={name}
             avatarPlaceholder={avatarPlaceholder}
             prompt={prompt}
             capabilities={capabilities}
+            draftEmployeeId={draftEmployeeId}
+            avatarPreviewGenerateEnabled={avatarPreviewGenerateEnabled}
           />
         ) : null}
       </CardContent>
@@ -150,13 +256,19 @@ export function CreateEmployeeWizard() {
               disabled={!canGoNext || pending}
               onClick={goNext}
             >
-              Continue
+              {step === 2 && pending ? "Saving draft…" : "Continue"}
             </Button>
           ) : (
             <Button
               type="button"
               className="bg-neutral-200 text-neutral-950 hover:bg-neutral-300"
-              disabled={pending || !role || !name.trim() || !prompt.trim()}
+              disabled={
+                pending ||
+                !role ||
+                !name.trim() ||
+                !prompt.trim() ||
+                (role === "Other" && roleCustomTitle.trim().length < 2)
+              }
               onClick={onSubmit}
             >
               {pending ? "Deploying…" : "Deploy employee"}
