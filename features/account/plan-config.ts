@@ -74,6 +74,18 @@ export const PLANS: Record<PlanType, PlanConfig> = {
 
 export const DEFAULT_PLAN_TYPE: PlanType = "FREE";
 
+/** When multiple subscription rows grant access, pick the highest tier. */
+const PLAN_TIER_RANK: Record<PlanType, number> = {
+  FREE: 0,
+  PRO: 1,
+  ENTERPRISE: 2,
+  GOVTECH: 3,
+};
+
+export function highestPlanType(a: PlanType, b: PlanType): PlanType {
+  return PLAN_TIER_RANK[a] >= PLAN_TIER_RANK[b] ? a : b;
+}
+
 export function getPlanConfig(planType: PlanType): PlanConfig {
   return PLANS[planType];
 }

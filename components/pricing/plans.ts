@@ -29,11 +29,11 @@ export const PRICING_PLANS: PricingPlan[] = [
       "Higher session and token limits",
       "Realtime sessions and voice",
       "Faster routing and priority capacity",
-      "Upgrade billing in Settings",
+      "Checkout with Polar from Pricing or Settings",
     ],
     ctaLabel: "Upgrade to Pro",
     ctaVariant: "default",
-    href: "/settings",
+    href: "/premium",
     highlighted: true,
   },
   {

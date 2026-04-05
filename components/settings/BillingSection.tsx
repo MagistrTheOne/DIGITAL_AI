@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useSettingsDto } from "@/components/settings/settings-context";
 import { dashboardGlassCardClassName } from "@/components/shared/dashboardGlassCard";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,14 @@ function formatSessionLimit(n: number): string {
 
 export function BillingSection() {
   const { billing } = useSettingsDto();
+  const showPolarProUpgrade =
+    billing.polarProCheckoutEnabled && billing.planType === "FREE";
+  const showPolarEnterpriseUpgrade =
+    billing.polarEnterpriseCheckoutEnabled &&
+    (billing.planType === "FREE" || billing.planType === "PRO");
+  const showPolarPortal =
+    billing.polarPortalEnabled &&
+    (billing.planType === "PRO" || billing.planType === "ENTERPRISE");
 
   const sessionsDisplay = `${billing.sessionsUsed} / ${formatSessionLimit(billing.sessionsLimit)}`;
   const tokensDisplay = `${formatTokens(billing.tokensUsed)} / ${billing.tokensLimit === -1 ? "∞" : formatTokens(billing.tokensLimit)}`;
@@ -64,16 +74,55 @@ export function BillingSection() {
         </div>
         <Separator className="bg-neutral-800/80" />
         <p className="text-xs text-neutral-500">
-          Upgrade path will connect to your billing provider (Stripe / Polar).
+          {billing.polarProCheckoutEnabled ||
+          billing.polarEnterpriseCheckoutEnabled ||
+          billing.polarPortalEnabled
+            ? "Subscriptions are billed through Polar (Merchant of Record). Webhooks keep your plan in sync."
+            : "Set POLAR_ACCESS_TOKEN and product ids in the environment to enable checkout and the customer portal."}
         </p>
       </CardContent>
-      <CardFooter className="border-t border-neutral-800/80 pt-3">
-        <Button
-          type="button"
-          className="bg-neutral-200 text-neutral-950 hover:bg-neutral-300"
-        >
-          Upgrade plan
-        </Button>
+      <CardFooter className="flex flex-col gap-2 border-t border-neutral-800/80 pt-3 sm:flex-row sm:flex-wrap">
+        {showPolarProUpgrade ? (
+          <Button
+            asChild
+            className="bg-neutral-200 text-neutral-950 hover:bg-neutral-300"
+          >
+            <a href="/api/billing/polar/checkout?period=monthly">
+              Upgrade to Pro
+            </a>
+          </Button>
+        ) : null}
+        {showPolarEnterpriseUpgrade ? (
+          <Button
+            asChild
+            variant="outline"
+            className="border-neutral-600 bg-transparent text-neutral-200 hover:bg-neutral-900"
+          >
+            <a href="/api/billing/polar/checkout?plan=enterprise">
+              {billing.planType === "PRO"
+                ? "Upgrade to Enterprise"
+                : "Enterprise checkout"}
+            </a>
+          </Button>
+        ) : null}
+        {showPolarPortal ? (
+          <Button
+            asChild
+            variant="outline"
+            className="border-neutral-600 bg-transparent text-neutral-200 hover:bg-neutral-900"
+          >
+            <a href="/api/billing/polar/portal">Manage subscription</a>
+          </Button>
+        ) : null}
+        {!showPolarProUpgrade && billing.planType === "FREE" ? (
+          <Button
+            asChild
+            variant="outline"
+            className="border-neutral-600 bg-transparent text-neutral-200 hover:bg-neutral-900"
+          >
+            <Link href="/premium">View pricing</Link>
+          </Button>
+        ) : null}
       </CardFooter>
     </Card>
   );

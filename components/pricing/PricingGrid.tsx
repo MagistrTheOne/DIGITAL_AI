@@ -11,7 +11,13 @@ import { PricingCard } from "@/components/pricing/PricingCard";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 
-export function PricingGrid() {
+export function PricingGrid({
+  polarProCheckout = false,
+  polarEnterpriseCheckout = false,
+}: {
+  polarProCheckout?: boolean;
+  polarEnterpriseCheckout?: boolean;
+}) {
   const [billing, setBilling] = React.useState<BillingPeriod>("monthly");
 
   return (
@@ -63,6 +69,14 @@ export function PricingGrid() {
       >
         {PRICING_PLANS.map((plan, index) => {
           const { priceLabel, priceHint } = planDisplayPrice(plan, billing);
+          let resolvedHref = plan.href;
+          let ctaLabelOverride: string | undefined;
+          if (polarProCheckout && plan.id === "pro") {
+            resolvedHref = `/api/billing/polar/checkout?period=${billing}`;
+          } else if (polarEnterpriseCheckout && plan.id === "enterprise") {
+            resolvedHref = "/api/billing/polar/checkout?plan=enterprise";
+            ctaLabelOverride = "Subscribe with Polar";
+          }
           return (
             <div key={plan.id} className="min-w-0">
               <PricingCard
@@ -70,6 +84,8 @@ export function PricingGrid() {
                 index={index}
                 priceLabel={priceLabel}
                 priceHint={priceHint}
+                href={resolvedHref}
+                ctaLabelOverride={ctaLabelOverride}
               />
             </div>
           );

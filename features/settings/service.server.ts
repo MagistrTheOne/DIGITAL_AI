@@ -2,6 +2,11 @@ import { eq } from "drizzle-orm";
 
 import type { SettingsDTO } from "@/features/settings/types";
 import { getCurrentSession } from "@/lib/auth/session.server";
+import {
+  isPolarEnterpriseCheckoutConfigured,
+  isPolarPortalConfigured,
+  isPolarProCheckoutConfigured,
+} from "@/lib/billing/polar-env";
 import { getPlanForUser } from "@/services/db/repositories/billing.repository";
 import { getSettingsForUser } from "@/services/db/repositories/settings.repository";
 import { getUsageForUser } from "@/services/db/repositories/usage.repository";
@@ -84,11 +89,15 @@ export async function getSettingsDTO(): Promise<SettingsDTO | null> {
       image: u.image ?? null,
     },
     billing: {
+      planType: plan.name,
       planLabel: plan.label,
       sessionsUsed: usage.sessionsUsed,
       sessionsLimit: plan.limits.sessions,
       tokensUsed: usage.tokensUsed,
       tokensLimit: plan.limits.tokens,
+      polarProCheckoutEnabled: isPolarProCheckoutConfigured(),
+      polarEnterpriseCheckoutEnabled: isPolarEnterpriseCheckoutConfigured(),
+      polarPortalEnabled: isPolarPortalConfigured(),
     },
     aiDefaults: merged.aiDefaults,
     arachne: merged.arachne,

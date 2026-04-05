@@ -2,13 +2,14 @@
  * DB-backed plan assignment (subscription row + user.plan_type fallback).
  * Limits/features remain in `features/account/plan-config.ts`.
  */
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { subscription, user } from "@/db/schema";
 import type { PlanType } from "@/features/account/types";
 import {
   DEFAULT_PLAN_TYPE,
+  highestPlanType,
   planTypeFromString,
 } from "@/features/account/plan-config";
 
@@ -21,23 +22,30 @@ export const SUBSCRIPTION_STATUS = {
   INCOMPLETE: "incomplete",
 } as const;
 
+const SUBSCRIPTION_GRANTS_PLAN = [
+  SUBSCRIPTION_STATUS.ACTIVE,
+  SUBSCRIPTION_STATUS.TRIALING,
+] as const;
+
 async function resolveUserPlanType(userId: string): Promise<PlanType> {
-  const [activeSub] = await db
+  const activeSubs = await db
     .select()
     .from(subscription)
     .where(
       and(
         eq(subscription.userId, userId),
-        eq(subscription.status, SUBSCRIPTION_STATUS.ACTIVE),
+        inArray(subscription.status, [...SUBSCRIPTION_GRANTS_PLAN]),
       ),
     )
-    .orderBy(desc(subscription.updatedAt))
-    .limit(1);
+    .orderBy(desc(subscription.updatedAt));
 
-  if (activeSub) {
-    const fromSub = planTypeFromString(activeSub.planType);
-    if (fromSub) return fromSub;
+  let best: PlanType | null = null;
+  for (const subRow of activeSubs) {
+    const fromSub = planTypeFromString(subRow.planType);
+    if (!fromSub) continue;
+    best = best ? highestPlanType(best, fromSub) : fromSub;
   }
+  if (best) return best;
 
   const [u] = await db.select().from(user).where(eq(user.id, userId)).limit(1);
   if (!u) return DEFAULT_PLAN_TYPE;

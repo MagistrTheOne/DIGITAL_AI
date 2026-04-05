@@ -1,3 +1,5 @@
+import type { PlanType } from "@/features/account/types";
+
 /**
  * Settings BFF → UI (no DB row types).
  */
@@ -8,11 +10,18 @@ export type SettingsAccountDTO = {
 };
 
 export type SettingsBillingDTO = {
+  planType: PlanType;
   planLabel: string;
   sessionsUsed: number;
   sessionsLimit: number;
   tokensUsed: number;
   tokensLimit: number;
+  /** Polar Pro checkout (token + Pro product id(s)). */
+  polarProCheckoutEnabled: boolean;
+  /** Polar Enterprise product checkout. */
+  polarEnterpriseCheckoutEnabled: boolean;
+  /** Polar customer portal (env: token). */
+  polarPortalEnabled: boolean;
 };
 
 export type SettingsAiDefaultsDTO = {

@@ -25,13 +25,21 @@ export function PricingCard({
   index,
   priceLabel,
   priceHint,
+  href: hrefProp,
+  ctaLabelOverride,
 }: {
   plan: PricingPlan;
   index: number;
   priceLabel: string;
   priceHint?: string;
+  /** Overrides `plan.href` (e.g. Polar checkout with billing period). */
+  href?: string;
+  ctaLabelOverride?: string;
 }) {
-  const isExternal = plan.href.startsWith("mailto:");
+  const href = hrefProp ?? plan.href;
+  const cta = ctaLabelOverride ?? plan.ctaLabel;
+  const isExternal = href.startsWith("mailto:");
+  const isApiCheckout = href.startsWith("/api/");
   const stagger =
     STAGGER_DELAY[Math.min(index, STAGGER_DELAY.length - 1)] ?? "delay-[0ms]";
 
@@ -102,9 +110,11 @@ export function PricingCard({
           )}
         >
           {isExternal ? (
-            <a href={plan.href}>{plan.ctaLabel}</a>
+            <a href={href}>{cta}</a>
+          ) : isApiCheckout ? (
+            <a href={href}>{cta}</a>
           ) : (
-            <Link href={plan.href}>{plan.ctaLabel}</Link>
+            <Link href={href}>{cta}</Link>
           )}
         </Button>
       </CardFooter>
