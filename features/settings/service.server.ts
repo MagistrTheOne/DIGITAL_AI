@@ -10,6 +10,8 @@ import {
 import { getPlanForUser } from "@/services/db/repositories/billing.repository";
 import { getSettingsForUser } from "@/services/db/repositories/settings.repository";
 import { getUsageForUser } from "@/services/db/repositories/usage.repository";
+import { listActiveApiKeysForUser } from "@/services/db/repositories/user-api-key.repository";
+import { getSecuritySessionsDto } from "@/lib/auth/sessions.server";
 import { db } from "@/db";
 import { user } from "@/db/schema";
 
@@ -54,6 +56,10 @@ export async function getSettingsDTO(): Promise<SettingsDTO | null> {
   const settingsRow = await getSettingsForUser(userId);
   const plan = await getPlanForUser(userId);
   const usage = await getUsageForUser(userId);
+  const [sessions, keyRows] = await Promise.all([
+    getSecuritySessionsDto(),
+    listActiveApiKeysForUser(userId),
+  ]);
 
   const defaults = {
     tone: "formal",
@@ -103,5 +109,15 @@ export async function getSettingsDTO(): Promise<SettingsDTO | null> {
     },
     aiDefaults: merged.aiDefaults,
     arachne: merged.arachne,
+    security: {
+      sessions,
+      apiKeys: keyRows.map((k) => ({
+        id: k.id,
+        prefix: k.prefix,
+        name: k.name,
+        createdAt: k.createdAt.toISOString(),
+        lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
+      })),
+    },
   };
 }

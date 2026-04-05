@@ -267,6 +267,29 @@ export const userSettings = pgTable("user_settings", {
     .defaultNow(),
 });
 
+/** User-issued API keys for programmatic access (secret stored as SHA-256 only). */
+export const userApiKey = pgTable(
+  "user_api_key",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    keyHash: text("key_hash").notNull().unique(),
+    prefix: text("prefix").notNull(),
+    name: text("name"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("user_api_key_userId_idx").on(table.userId),
+    index("user_api_key_keyHash_idx").on(table.keyHash),
+  ],
+);
+
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
   accounts: many(account),
@@ -279,6 +302,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
     fields: [user.id],
     references: [userSettings.userId],
   }),
+  apiKeys: many(userApiKey),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -342,6 +366,13 @@ export const employeeRelations = relations(employee, ({ one }) => ({
 export const userSettingsRelations = relations(userSettings, ({ one }) => ({
   user: one(user, {
     fields: [userSettings.userId],
+    references: [user.id],
+  }),
+}));
+
+export const userApiKeyRelations = relations(userApiKey, ({ one }) => ({
+  user: one(user, {
+    fields: [userApiKey.userId],
     references: [user.id],
   }),
 }));

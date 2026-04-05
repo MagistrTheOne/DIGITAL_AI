@@ -40,11 +40,33 @@ export type SettingsArachneDTO = {
   sttModel: string;
 };
 
+export type SettingsSecuritySessionDTO = {
+  id: string;
+  deviceLabel: string;
+  ipLabel: string;
+  activityLabel: string;
+  isCurrent: boolean;
+};
+
+export type SettingsSecurityApiKeyDTO = {
+  id: string;
+  prefix: string;
+  name: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+};
+
+export type SettingsSecurityDTO = {
+  sessions: SettingsSecuritySessionDTO[];
+  apiKeys: SettingsSecurityApiKeyDTO[];
+};
+
 export type SettingsDTO = {
   account: SettingsAccountDTO;
   billing: SettingsBillingDTO;
   aiDefaults: SettingsAiDefaultsDTO;
   arachne: SettingsArachneDTO;
+  security: SettingsSecurityDTO;
 };
 
 export type UpdateAiDefaultsInput = {
