@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Menu } from "lucide-react";
 
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
   { href: "#about", label: "About" },
+  { href: "#use-cases", label: "Use cases" },
   { href: "#pricing", label: "Pricing" },
   { href: "/trust", label: "Trust" },
   { href: "#contact", label: "Contact" },
@@ -49,9 +51,17 @@ export function LandingNav({ authenticated = false }: { authenticated?: boolean 
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
         <Link
           href="/home"
-          className="shrink-0 font-semibold tracking-tight text-white transition hover:text-neutral-200"
+          className="flex shrink-0 items-center gap-2.5 font-semibold tracking-tight text-white transition hover:text-neutral-200"
         >
-          NULLXES
+          <Image
+            src="/avatars/logo.jpg"
+            alt=""
+            width={32}
+            height={32}
+            className="size-8 shrink-0 rounded-md object-contain"
+            priority
+          />
+          <span>NULLXES</span>
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">

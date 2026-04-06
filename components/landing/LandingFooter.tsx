@@ -18,6 +18,9 @@ export function LandingFooter() {
           <Link href="/trust" className="transition hover:text-white">
             Trust
           </Link>
+          <a href="#use-cases" className="transition hover:text-white">
+            Use cases
+          </a>
           <a href="#pricing" className="transition hover:text-white">
             Pricing
           </a>

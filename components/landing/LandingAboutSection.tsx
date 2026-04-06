@@ -1,6 +1,6 @@
 import { LandingArchitectureCards } from "@/components/landing/LandingArchitectureCards";
 import { LandingRoiCalculator } from "@/components/landing/LandingRoiCalculator";
-import { LandingUseCaseCards } from "@/components/landing/LandingUseCaseCards";
+import { LandingUseCaseAvatarPanels } from "@/components/landing/LandingUseCaseAvatarPanels";
 
 export function LandingAboutSection() {
   return (
@@ -51,18 +51,25 @@ export function LandingAboutSection() {
         </div>
       </div>
 
-      <div className="flex min-h-svh flex-col justify-center border-t border-white/10 px-6 py-24 sm:py-32">
-        <div className="mx-auto w-full max-w-6xl">
+      <div
+        id="use-cases"
+        className="scroll-mt-20 border-t border-white/10 bg-black"
+      >
+        <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           <h3 className="text-xs font-medium uppercase tracking-[0.2em] text-neutral-500">
             Use cases
           </h3>
-          <p className="mt-4 max-w-2xl text-neutral-400">
-            Pick a lane — the same session model powers front-office and
-            internal workflows. Select a card to read the full conditions.
+          <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">
+            Six Vantage employees. One session model.
+          </h2>
+          <p className="mt-5 max-w-3xl text-pretty text-base leading-relaxed text-neutral-400 sm:text-lg">
+            Each digital employee runs the same governed session core—pick a
+            lane, focus on a card, and preview how that role is presented with a
+            voice and avatar. The last name,{" "}
+            <span className="text-neutral-300">Vantage</span>, marks the NULLXES
+            workforce line.
           </p>
-          <div className="mt-10 border-t border-white/10 pt-10">
-            <LandingUseCaseCards />
-          </div>
+          <LandingUseCaseAvatarPanels />
         </div>
       </div>
 

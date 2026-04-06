@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 import {
@@ -44,13 +45,14 @@ export function AppShell({
                 className="flex min-w-0 items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 aria-label="NULLXES"
               >
-                <div
-                  className="flex size-8 shrink-0 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 text-sm font-semibold text-neutral-100"
+                <Image
+                  src="/avatars/logo.jpg"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="size-8 shrink-0 rounded-md border border-neutral-800 object-contain"
                   title="NULLXES"
-                  aria-hidden
-                >
-                  N
-                </div>
+                />
                 <div className="min-w-0 truncate text-sm font-semibold leading-none text-neutral-200 group-data-[collapsible=icon]:hidden">
                   NULLXES
                 </div>

@@ -23,6 +23,7 @@ import {
 type NavItem = { href: string; label: string; Icon: LucideIcon };
 
 const NAV_ITEMS: NavItem[] = [
+  { href: "/home", label: "Home", Icon: Home },
   { href: "/ai-digital", label: "AI Digital", Icon: Sparkles },
   { href: "/analytics", label: "Analytics", Icon: LineChart },
   { href: "/create-employee", label: "Create Employee", Icon: UserPlus },

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
@@ -25,8 +26,15 @@ export function LegalDocChrome({
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link
               href="/home"
-              className="text-sm font-semibold tracking-tight text-white transition hover:text-neutral-200"
+              className="flex items-center gap-2 text-sm font-semibold tracking-tight text-white transition hover:text-neutral-200"
             >
+              <Image
+                src="/avatars/logo.jpg"
+                alt=""
+                width={28}
+                height={28}
+                className="size-7 shrink-0 rounded-md object-contain"
+              />
               NULLXES
             </Link>
             <Link
