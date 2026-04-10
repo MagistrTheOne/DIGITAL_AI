@@ -56,6 +56,7 @@ export function EmployeeInteractionPage({
   realtimeVoiceEnabled,
   avatarPreviewGenerateEnabled = false,
   identityClipEnabled = false,
+  autoDigitalHumanEnabled = false,
 }: {
   bootstrap: EmployeeSessionBootstrapDTO;
   displayName: string;
@@ -69,10 +70,13 @@ export function EmployeeInteractionPage({
   avatarPreviewGenerateEnabled?: boolean;
   /** Server: RunPod + ElevenLabs + Blob — InfiniteTalk one-shot identity when https reference image exists. */
   identityClipEnabled?: boolean;
+  /** Server: NULLXES_AUTO_DIGITAL_HUMAN=1 + required keys — post-deploy portrait → TTS → InfiniteTalk. */
+  autoDigitalHumanEnabled?: boolean;
 }) {
   const identityClipImageUrl = bootstrap.employee.identityClipImageUrl ?? null;
   const avatarPreviewVisible =
     avatarPreviewGenerateEnabled ||
+    autoDigitalHumanEnabled ||
     (identityClipEnabled && Boolean(identityClipImageUrl?.trim())) ||
     bootstrap.employee.avatarPreview?.renderStatus === "generating" ||
     bootstrap.employee.avatarPreview?.renderStatus === "failed" ||
@@ -460,14 +464,22 @@ export function EmployeeInteractionPage({
   const voiceState = realtimeVoiceActive ? realtimeVoiceState : stubVoiceState;
   const onVoicePress = realtimeVoiceActive ? realtimeOnVoicePress : stubOnVoicePress;
 
+  /**
+   * Base video on stage: prefer **persisted** identity / InfiniteTalk clip (`videoPreviewUrl`
+   * in DB → Blob). ARACHNE bootstrap may return its own preview URL when our clip is absent.
+   */
   const stageVideoPreview = React.useMemo(() => {
+    const fromDb = bootstrap.employee.videoPreview?.src?.trim();
+    if (fromDb) {
+      return bootstrap.employee.videoPreview;
+    }
     const fromArachne =
       bootstrap.realtime.ok &&
       bootstrap.arachneAvatar?.videoPreviewUrl?.trim();
     if (fromArachne) {
       return { src: fromArachne, type: "video/mp4" as const };
     }
-    return bootstrap.employee.videoPreview;
+    return undefined;
   }, [
     bootstrap.realtime.ok,
     bootstrap.arachneAvatar?.videoPreviewUrl,
@@ -497,6 +509,7 @@ export function EmployeeInteractionPage({
         displayName={displayName}
         roleLabel={roleLabel}
         voiceState={voiceState}
+        employeeId={employeeId}
       />
 
       {realtimeVoiceError ? (
@@ -545,6 +558,10 @@ export function EmployeeInteractionPage({
             generateEnabled={avatarPreviewGenerateEnabled}
             identityClipEnabled={identityClipEnabled}
             identityClipImageUrl={identityClipImageUrl}
+            autoDigitalHumanEnabled={autoDigitalHumanEnabled}
+            initialRenderStage={
+              bootstrap.employee.avatarPreview?.renderStage ?? null
+            }
             initialRenderStatus={
               bootstrap.employee.avatarPreview?.renderStatus ?? "idle"
             }

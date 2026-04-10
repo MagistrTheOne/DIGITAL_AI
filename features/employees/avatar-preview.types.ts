@@ -1,5 +1,8 @@
 export type RenderStatus = "idle" | "generating" | "ready" | "failed";
 
+/** Post-deploy auto digital-human pipeline phase (OpenAI → ElevenLabs → InfiniteTalk). */
+export type AvatarRenderStage = "face" | "voice" | "video";
+
 export type PreviewResponse = { jobId: string } | { videoUrl: string };
 
 export type JobStatusResponse = {

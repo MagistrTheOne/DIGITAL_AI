@@ -19,6 +19,7 @@ import {
   finalizeDraftEmployeeAction,
   submitCreateEmployeeAction,
 } from "@/features/employees/actions";
+import { normalizeAvatarLookDetailForStorage } from "@/lib/avatar/avatar-appearance-normalize";
 import type { CreateEmployeeInput, EmployeeRoleCategory } from "@/features/employees/types";
 
 import { BehaviorForm } from "@/components/create-employee/BehaviorForm";
@@ -65,8 +66,11 @@ function previewRoleLabel(
 
 export function CreateEmployeeWizard({
   avatarPreviewGenerateEnabled,
+  draftPortraitEnabled,
 }: {
   avatarPreviewGenerateEnabled: boolean;
+  /** OPENAI_API_KEY + BLOB — GPT Image portrait on Preview step before deploy. */
+  draftPortraitEnabled: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = React.useState(0);
@@ -96,7 +100,10 @@ export function CreateEmployeeWizard({
         ? { roleCustomTitle: roleCustomTitle.trim() }
         : {}),
       name: name.trim(),
-      avatarPlaceholder: avatarPlaceholder.trim() || undefined,
+      avatarPlaceholder: (() => {
+        const n = normalizeAvatarLookDetailForStorage(avatarPlaceholder);
+        return n || undefined;
+      })(),
       prompt: prompt.trim(),
       capabilities,
     };
@@ -234,6 +241,7 @@ export function CreateEmployeeWizard({
             capabilities={capabilities}
             draftEmployeeId={draftEmployeeId}
             avatarPreviewGenerateEnabled={avatarPreviewGenerateEnabled}
+            draftPortraitEnabled={draftPortraitEnabled}
           />
         ) : null}
       </CardContent>

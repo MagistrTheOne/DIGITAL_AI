@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Pencil, Plug2 } from "lucide-react";
 
 import type { VoiceUiState } from "@/components/employee-interaction/types";
 
@@ -17,10 +18,12 @@ export function EmployeeHeader({
   displayName,
   roleLabel,
   voiceState,
+  employeeId,
 }: {
   displayName: string;
   roleLabel?: string;
   voiceState: VoiceUiState;
+  employeeId: string;
 }) {
   const presence = presenceFromVoice(voiceState);
 
@@ -45,17 +48,41 @@ export function EmployeeHeader({
             <p className="text-sm text-neutral-500">{roleLabel}</p>
           ) : null}
         </div>
-        <Badge
-          variant="outline"
-          className={cn(
-            "shrink-0 border-neutral-700 font-medium",
-            presence === "active"
-              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200/90"
-              : "border-amber-500/35 bg-amber-500/10 text-amber-200/80",
-          )}
-        >
-          {presence === "active" ? "Active" : "Idle"}
-        </Badge>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-neutral-700 bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800"
+            asChild
+          >
+            <Link href={`/employees/${encodeURIComponent(employeeId)}/edit`}>
+              <Pencil className="size-3.5 shrink-0" aria-hidden />
+              <span className="whitespace-nowrap">Edit</span>
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-neutral-700 bg-neutral-900/80 text-neutral-200 hover:bg-neutral-800"
+            asChild
+          >
+            <Link href={`/employees/${encodeURIComponent(employeeId)}/workspace`}>
+              <Plug2 className="size-3.5 shrink-0" aria-hidden />
+              <span className="whitespace-nowrap">Workspace tools</span>
+            </Link>
+          </Button>
+          <Badge
+            variant="outline"
+            className={cn(
+              "border-neutral-700 font-medium",
+              presence === "active"
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200/90"
+                : "border-amber-500/35 bg-amber-500/10 text-amber-200/80",
+            )}
+          >
+            {presence === "active" ? "Active" : "Idle"}
+          </Badge>
+        </div>
       </div>
     </header>
   );

@@ -17,12 +17,14 @@ import {
   countEmployeesForUser,
   getEmployeeById,
   getEmployeeRowById,
+  deleteEmployeeRow,
   insertEmployeeRow,
   listEmployeesByQuery,
   updateEmployeeRow,
   type EmployeeConfigJson,
   type EmployeeRecord,
 } from "@/services/db/repositories/employees.repository";
+import { normalizeAvatarLookDetailForStorage } from "@/lib/avatar/avatar-appearance-normalize";
 import { resolveIdentityClipImageUrlFromRecord } from "@/lib/avatar/identity-clip.server";
 import { mintArachneSessionForEmployee } from "@/features/arachne-x/server/arachneAvatarBootstrap.server";
 import { enqueuePostDeployAvatarGeneration } from "@/lib/inference/avatar-generation-after-deploy.server";
@@ -61,6 +63,7 @@ function recordToEmployeeDTO(r: EmployeeRecord): EmployeeDTO {
       renderStatus: r.avatar_render_status,
       jobId: r.avatar_preview_job_id,
       error: r.avatar_preview_error,
+      renderStage: r.avatar_render_stage,
     },
     identityClipImageUrl: identityClipImageUrl ?? undefined,
   };
@@ -99,18 +102,53 @@ function dbRoleFromInput(input: CreateEmployeeInput): string {
   return input.role === "Other" ? "Other" : input.role;
 }
 
-function employeeConfigFromWizard(input: CreateEmployeeInput): EmployeeConfigJson {
-  const base: EmployeeConfigJson = {
+/** Wizard fields merged into `config` — safe for updates (does not clear video / identity URLs). */
+export function employeeConfigPatchFromWizard(
+  input: CreateEmployeeInput,
+): Partial<EmployeeConfigJson> {
+  const lookRaw = input.avatarPlaceholder?.trim() ?? "";
+  const avatarPlaceholder = lookRaw
+    ? normalizeAvatarLookDetailForStorage(lookRaw) || null
+    : null;
+  return {
     prompt: input.prompt,
     capabilities: input.capabilities,
-    avatarPlaceholder: input.avatarPlaceholder ?? null,
-    promptTemplateVersion: 1,
+    avatarPlaceholder,
     roleCustomTitle:
       input.role === "Other"
         ? (input.roleCustomTitle ?? "").trim()
         : null,
   };
-  return base;
+}
+
+function employeeConfigFromWizard(input: CreateEmployeeInput): EmployeeConfigJson {
+  return {
+    ...employeeConfigPatchFromWizard(input),
+    promptTemplateVersion: 1,
+  } as EmployeeConfigJson;
+}
+
+function rowToCreateEmployeeInput(
+  row: NonNullable<Awaited<ReturnType<typeof getEmployeeRowById>>>,
+): CreateEmployeeInput {
+  const cfg = (row.config ?? {}) as EmployeeConfigJson;
+  const roleCategory = toRoleCategory(row.role);
+  const caps = Array.isArray(cfg.capabilities)
+    ? cfg.capabilities.filter((x): x is string => typeof x === "string")
+    : [];
+  return {
+    role: roleCategory,
+    ...(roleCategory === "Other"
+      ? { roleCustomTitle: (cfg.roleCustomTitle ?? "").trim() || undefined }
+      : {}),
+    name: row.name,
+    avatarPlaceholder:
+      typeof cfg.avatarPlaceholder === "string"
+        ? cfg.avatarPlaceholder
+        : undefined,
+    prompt: typeof cfg.prompt === "string" ? cfg.prompt : "",
+    capabilities: caps,
+  };
 }
 
 /** Session-scoped list for AI Digital (server components only). */
@@ -168,6 +206,7 @@ export async function getEmployeeSessionBootstrap(
         renderStatus: "idle",
         jobId: null,
         error: null,
+        renderStage: null,
       },
     };
 
@@ -406,6 +445,104 @@ function isPostgresMissingRelationError(err: unknown): boolean {
   if (code === "42P01") return true;
   const msg = err instanceof Error ? err.message : String(err);
   return /relation .* does not exist/i.test(msg);
+}
+
+/** Load wizard-shaped input for the edit form (active employees only). */
+export async function getEmployeeForEdit(employeeId: string): Promise<
+  | { ok: true; employeeId: string; input: CreateEmployeeInput; status: string }
+  | { ok: false; error: string }
+> {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  if (!userId) return { ok: false, error: "Unauthorized" };
+
+  const row = await getEmployeeRowById(employeeId, userId);
+  if (!row) return { ok: false, error: "Not found" };
+  if (row.status === "draft") {
+    return {
+      ok: false,
+      error:
+        "This row is still a draft — continue from Create Employee, or deploy from the preview step.",
+    };
+  }
+
+  return {
+    ok: true,
+    employeeId: row.id,
+    input: rowToCreateEmployeeInput(row),
+    status: row.status,
+  };
+}
+
+/**
+ * Update name, role, instructions, capabilities, avatar look text.
+ * Does not remove `videoPreviewUrl` / identity URLs (patch merge in repository).
+ */
+export async function updateEmployee(
+  employeeId: string,
+  input: CreateEmployeeInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  if (!userId) return { ok: false, error: "Unauthorized" };
+
+  const roleCheck = validateRoleInput(input);
+  if (!roleCheck.ok) return roleCheck;
+
+  const row = await getEmployeeRowById(employeeId, userId);
+  if (!row) return { ok: false, error: "Not found" };
+  if (row.status === "draft") {
+    return { ok: false, error: "Use the create flow to edit drafts." };
+  }
+
+  const name = ensureVantageName(input.name);
+  const role = dbRoleFromInput(input);
+  const patch = employeeConfigPatchFromWizard(input);
+
+  try {
+    const ok = await updateEmployeeRow({
+      employeeId,
+      userId,
+      name,
+      role,
+      config: patch,
+    });
+    if (!ok) return { ok: false, error: "Not found" };
+    return { ok: true };
+  } catch (err) {
+    if (isPostgresMissingRelationError(err)) {
+      return {
+        ok: false,
+        error:
+          "Database is missing the employees table. Run npm run db:push from the project root.",
+      };
+    }
+    throw err;
+  }
+}
+
+/** Hard-delete employee (cascades integrations, knowledge, avatar jobs per schema). */
+export async function deleteEmployee(
+  employeeId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  if (!userId) return { ok: false, error: "Unauthorized" };
+
+  try {
+    const ok = await deleteEmployeeRow(employeeId, userId);
+    if (!ok) return { ok: false, error: "Not found" };
+    return { ok: true };
+  } catch (err) {
+    if (isPostgresMissingRelationError(err)) {
+      return {
+        ok: false,
+        error:
+          "Database is missing the employees table. Run npm run db:push from the project root.",
+      };
+    }
+    throw err;
+  }
 }
 
 /** Workspace integrations + knowledge list for dashboard RSC (auth-scoped). */

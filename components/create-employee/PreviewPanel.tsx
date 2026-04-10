@@ -5,9 +5,17 @@ import * as React from "react";
 import { AvatarPreviewSection } from "@/components/employee-interaction/AvatarPreviewSection";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getEmployeeAvatarPreviewStateAction } from "@/features/employees/actions";
-import type { RenderStatus } from "@/features/employees/avatar-preview.types";
+import type {
+  AvatarRenderStage,
+  RenderStatus,
+} from "@/features/employees/avatar-preview.types";
+import {
+  normalizeAvatarLookDetailForStorage,
+  resolvePortraitLookDetailForGeneration,
+} from "@/lib/avatar/avatar-appearance-normalize";
 import { cn } from "@/lib/utils";
 
 function displayName(raw: string) {
@@ -32,6 +40,7 @@ export function PreviewPanel({
   capabilities,
   draftEmployeeId,
   avatarPreviewGenerateEnabled,
+  draftPortraitEnabled,
 }: {
   roleLabel: string;
   name: string;
@@ -40,20 +49,37 @@ export function PreviewPanel({
   capabilities: string[];
   draftEmployeeId: string | null;
   avatarPreviewGenerateEnabled: boolean;
+  draftPortraitEnabled: boolean;
 }) {
   const dn = displayName(name);
   const initials = initialsFromDisplay(dn);
 
   const [snap, setSnap] = React.useState<{
     renderStatus: RenderStatus;
+    renderStage: AvatarRenderStage | null;
     videoUrl: string | null;
     jobId: string | null;
     error: string | null;
+    identityImageUrl: string | null;
   }>({
     renderStatus: "idle",
+    renderStage: null,
     videoUrl: null,
     jobId: null,
     error: null,
+    identityImageUrl: null,
+  });
+
+  const [portraitBusy, setPortraitBusy] = React.useState(false);
+  const [portraitError, setPortraitError] = React.useState<string | null>(null);
+
+  const hasCustomLook = Boolean(
+    normalizeAvatarLookDetailForStorage(avatarPlaceholder),
+  );
+  const lookDetail = resolvePortraitLookDetailForGeneration({
+    rawPlaceholder: avatarPlaceholder,
+    roleLabel,
+    displayName: dn,
   });
 
   React.useEffect(() => {
@@ -64,9 +90,11 @@ export function PreviewPanel({
       if (cancelled || !r.ok) return;
       setSnap({
         renderStatus: r.renderStatus,
+        renderStage: r.renderStage,
         videoUrl: r.videoUrl,
         jobId: r.jobId,
         error: r.error,
+        identityImageUrl: r.identityImageUrl,
       });
     })();
     return () => {
@@ -81,15 +109,46 @@ export function PreviewPanel({
       if (!r.ok) return;
       setSnap({
         renderStatus: r.renderStatus,
+        renderStage: r.renderStage,
         videoUrl: r.videoUrl,
         jobId: r.jobId,
         error: r.error,
+        identityImageUrl: r.identityImageUrl,
       });
     })();
   }, [draftEmployeeId]);
 
+  const generateDraftPortrait = React.useCallback(async () => {
+    if (!draftEmployeeId?.trim() || !lookDetail) return;
+    setPortraitBusy(true);
+    setPortraitError(null);
+    try {
+      const res = await fetch(
+        `/api/employees/${encodeURIComponent(draftEmployeeId.trim())}/draft-portrait`,
+        { method: "POST" },
+      );
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        imageUrl?: string;
+        error?: string;
+      };
+      if (!res.ok || !body.imageUrl?.trim()) {
+        setPortraitError(body.error?.trim() || "Portrait generation failed");
+        return;
+      }
+      onPreviewRefresh();
+    } catch {
+      setPortraitError("Portrait generation failed");
+    } finally {
+      setPortraitBusy(false);
+    }
+  }, [draftEmployeeId, onPreviewRefresh]);
+
+  const portraitUrl = snap.identityImageUrl?.trim() || null;
+
   const avatarPreviewVisible =
     avatarPreviewGenerateEnabled ||
+    draftPortraitEnabled ||
     snap.renderStatus === "generating" ||
     snap.renderStatus === "failed" ||
     Boolean(snap.videoUrl);
@@ -121,10 +180,57 @@ export function PreviewPanel({
               )}
             </div>
             <p className="text-[11px] leading-snug text-neutral-500">
-              Avatar preview — generate before deploy or after from AI Digital.
+              Generate a GPT Image portrait on this step when enabled; video
+              preview uses ARACHNE or AI Digital after deploy.
             </p>
           </div>
         </div>
+
+        {draftPortraitEnabled && draftEmployeeId ? (
+          <div className="flex flex-col gap-2 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
+            <div className="text-xs font-medium text-neutral-300">
+              Portrait preview (GPT Image)
+            </div>
+            {portraitUrl ? (
+              <div className="overflow-hidden rounded-md border border-neutral-800 bg-black/40">
+                <img
+                  src={portraitUrl}
+                  alt="Generated portrait preview"
+                  className="aspect-square w-full max-w-xs object-cover"
+                />
+              </div>
+            ) : (
+              <p className="text-[11px] text-neutral-500">
+                No portrait yet — same pipeline as auto digital human (OpenAI →
+                Blob).{" "}
+                {hasCustomLook
+                  ? "Guided by your look text from step 1."
+                  : "Guided by role and display name until you add a look in step 1."}
+              </p>
+            )}
+            {portraitError ? (
+              <p className="text-[11px] text-red-400/90" role="alert">
+                {portraitError}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="w-fit border-neutral-700 bg-neutral-900 text-neutral-200 hover:bg-neutral-800"
+              disabled={portraitBusy}
+              onClick={() => void generateDraftPortrait()}
+            >
+              {portraitBusy ? "Generating…" : "Generate portrait"}
+            </Button>
+            {!hasCustomLook ? (
+              <p className="text-[10px] text-neutral-600">
+                Optional: add a look in step 1 for finer control over the
+                portrait.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {draftEmployeeId ? (
           <AvatarPreviewSection
@@ -132,6 +238,7 @@ export function PreviewPanel({
             visible={avatarPreviewVisible}
             generateEnabled={avatarPreviewGenerateEnabled}
             initialRenderStatus={snap.renderStatus}
+            initialRenderStage={snap.renderStage}
             initialVideoUrl={snap.videoUrl}
             initialJobId={snap.jobId}
             initialError={snap.error}
@@ -172,11 +279,16 @@ export function PreviewPanel({
             )}
           </div>
         </div>
-        {avatarPlaceholder.trim() ? (
+        {hasCustomLook ? (
           <p className="text-xs text-neutral-500">
-            Video look: {avatarPlaceholder.trim()}
+            Video look (saved):{" "}
+            {normalizeAvatarLookDetailForStorage(avatarPlaceholder)}
           </p>
-        ) : null}
+        ) : (
+          <p className="text-xs text-neutral-500">
+            No custom look in step 1 — portrait uses role and display name.
+          </p>
+        )}
       </div>
     </div>
   );

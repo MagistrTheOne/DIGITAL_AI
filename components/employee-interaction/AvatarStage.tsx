@@ -70,8 +70,12 @@ export function AvatarStage({
       : hasSegment
         ? "Segment video · RunPod (muted overlay · Realtime audio)"
         : src
-          ? "Preview clip · live stream when ARACHNE sends JPEG chunks"
-          : "Live avatar · connect ARACHNE WS";
+          ? arachneStreamEnabled
+            ? "Loop clip + live face when ARACHNE streams JPEG"
+            : "Digital human · InfiniteTalk clip (loop)"
+          : arachneStreamEnabled
+            ? "Connect ARACHNE WS for live face"
+            : "No clip yet · run auto avatar or identity preview";
 
   const footerSecondary =
     perceptionHint && digitalHumanState !== "idle"
@@ -102,6 +106,7 @@ export function AvatarStage({
               loop
               muted
               preload="metadata"
+              autoPlay={!showLiveCanvas}
             />
           ) : (
             <div className="flex size-full items-center justify-center">

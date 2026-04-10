@@ -13,6 +13,9 @@ import {
   updateEmployeeVideoPreviewUrl,
 } from "@/services/db/repositories/employees.repository";
 
+import { isAutoDigitalHumanPipelineEnabled } from "@/lib/avatar/auto-digital-human-env.server";
+import { runAutoDigitalHumanPipeline } from "@/lib/avatar/auto-digital-human.server";
+
 export function isArachneAvatarPreviewConfigured(): boolean {
   return Boolean(process.env.ARACHNE_AVATAR_PREVIEW_URL?.trim());
 }
@@ -29,6 +32,16 @@ export function enqueuePostDeployAvatarGeneration(input: {
   role: string;
   config: EmployeeConfigJson;
 }): void {
+  if (isAutoDigitalHumanPipelineEnabled()) {
+    void runAutoDigitalHumanPipeline({
+      employeeId: input.employeeId,
+      userId: input.userId,
+    }).catch((err) => {
+      console.error("[NULLXES] auto digital-human pipeline:", err);
+    });
+    return;
+  }
+
   if (isRunPodAvatarConfigured()) {
     void enqueueRunPodAvatarJobIfConfigured({
       employeeId: input.employeeId,

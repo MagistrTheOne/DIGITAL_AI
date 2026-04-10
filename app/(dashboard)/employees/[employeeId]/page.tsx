@@ -1,14 +1,13 @@
 import Link from "next/link";
 
-import { EmployeeWorkspaceIntegrations } from "@/components/employees/EmployeeWorkspaceIntegrations";
 import { EmployeeInteractionPage } from "@/components/employee-interaction/EmployeeInteractionPage";
 import {
   getEmployeeForDashboard,
   getEmployeeSessionBootstrap,
 } from "@/features/employees/service.server";
+import { isAutoDigitalHumanPipelineEnabled } from "@/lib/avatar/auto-digital-human-env.server";
 import { isIdentityClipInfrastructureConfigured } from "@/lib/avatar/identity-clip-env.server";
 import { isNullxesRealtimeVoiceEnvEnabled } from "@/lib/env/nullxes-realtime-voice.server";
-import { getCurrentSession } from "@/lib/auth/session.server";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -92,9 +91,10 @@ export default async function EmployeeDetailPage({
     process.env.ARACHNE_AVATAR_PREVIEW_URL?.trim(),
   );
   const identityClipEnabled = isIdentityClipInfrastructureConfigured();
+  const autoDigitalHumanEnabled = isAutoDigitalHumanPipelineEnabled();
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-y-auto overflow-x-hidden p-6">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-6">
       <EmployeeInteractionPage
         key={`${employeeId}-${bootstrap.sessionId}`}
         bootstrap={bootstrap}
@@ -105,8 +105,8 @@ export default async function EmployeeDetailPage({
         realtimeVoiceEnabled={realtimeVoiceEnabled}
         avatarPreviewGenerateEnabled={avatarPreviewGenerateEnabled}
         identityClipEnabled={identityClipEnabled}
+        autoDigitalHumanEnabled={autoDigitalHumanEnabled}
       />
-      <EmployeeWorkspaceIntegrations employeeId={employeeId} />
     </div>
   );
 }

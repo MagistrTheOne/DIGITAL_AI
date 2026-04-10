@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 
 import { VideoPlayer } from "@/components/media/VideoPlayer";
 import { Button } from "@/components/ui/button";
-import type { RenderStatus } from "@/features/employees/avatar-preview.types";
+import type {
+  AvatarRenderStage,
+  RenderStatus,
+} from "@/features/employees/avatar-preview.types";
 import { useAvatarPreviewGeneration } from "@/features/employees/useAvatarPreviewGeneration";
 
 const HIDE_PREVIEW_BTN_KEY = "nullxes.hideAvatarPreviewGenerate";
@@ -21,6 +24,8 @@ export function AvatarPreviewSection({
   initialVideoUrl,
   initialJobId,
   initialError,
+  autoDigitalHumanEnabled = false,
+  initialRenderStage = null,
   className,
   /** When set (e.g. create wizard), avoids full route refresh that would reset client state. */
   onRefreshOverride,
@@ -38,6 +43,9 @@ export function AvatarPreviewSection({
   initialVideoUrl: string | null;
   initialJobId: string | null;
   initialError: string | null;
+  /** Post-deploy auto pipeline (NULLXES_AUTO_DIGITAL_HUMAN=1 + keys) — enables polling + retry route. */
+  autoDigitalHumanEnabled?: boolean;
+  initialRenderStage?: AvatarRenderStage | null;
   className?: string;
   onRefreshOverride?: () => void;
 }) {
@@ -60,7 +68,12 @@ export function AvatarPreviewSection({
     identityClipEnabled,
     identityClipImageUrl,
     identityClipIntroText,
+    autoDigitalHumanEnabled,
+    initialRenderStage,
   });
+
+  const stageActive = (s: AvatarRenderStage) =>
+    preview.renderStatus === "generating" && preview.renderStage === s;
 
   const canGenerate =
     generateEnabled ||
@@ -80,8 +93,12 @@ export function AvatarPreviewSection({
 
   if (!visible || hiddenForSession) return null;
 
+  const showAutoHumanProgress =
+    autoDigitalHumanEnabled && preview.renderStatus === "generating";
   const showSkeleton =
-    (preview.renderStatus === "generating" || preview.busy) && !preview.videoUrl;
+    !showAutoHumanProgress &&
+    (preview.renderStatus === "generating" || preview.busy) &&
+    !preview.videoUrl;
   const showVideo = Boolean(preview.videoUrl);
 
   return (
@@ -96,12 +113,48 @@ export function AvatarPreviewSection({
         </div>
       ) : null}
 
+      {showAutoHumanProgress ? (
+        <div className="flex w-full max-w-sm flex-col gap-2 rounded-lg border border-neutral-800 bg-neutral-950/50 px-3 py-2.5 text-left">
+          <p className="text-xs font-medium text-neutral-200">
+            Creating digital human…
+          </p>
+          <p className="text-[11px] leading-snug text-neutral-500">
+            Пока создаётся цифровой человек — налей себе чай ☕
+          </p>
+          <ul className="space-y-1 text-[11px] text-neutral-500">
+            <li
+              className={
+                stageActive("face") ? "font-medium text-neutral-200" : undefined
+              }
+            >
+              {stageActive("face") ? "→ " : ""}Creating face
+            </li>
+            <li
+              className={
+                stageActive("voice") ? "font-medium text-neutral-200" : undefined
+              }
+            >
+              {stageActive("voice") ? "→ " : ""}Generating voice
+            </li>
+            <li
+              className={
+                stageActive("video") ? "font-medium text-neutral-200" : undefined
+              }
+            >
+              {stageActive("video") ? "→ " : ""}Rendering video
+            </li>
+          </ul>
+        </div>
+      ) : null}
+
       {showSkeleton ? (
         <div
           className="flex aspect-video w-full max-w-sm animate-pulse items-center justify-center rounded-lg border border-neutral-800 bg-neutral-900/60"
           aria-hidden
         >
-          <span className="text-[10px] text-neutral-600">Generating preview…</span>
+          <span className="text-[10px] text-neutral-600">
+            {autoDigitalHumanEnabled ? "Rendering…" : "Generating preview…"}
+          </span>
         </div>
       ) : null}
 
@@ -134,7 +187,7 @@ export function AvatarPreviewSection({
               variant="ghost"
               size="sm"
               className="h-7 text-xs text-neutral-400 hover:text-neutral-200"
-              onClick={() => preview.retry()}
+              onClick={() => void preview.retry()}
             >
               Retry
             </Button>

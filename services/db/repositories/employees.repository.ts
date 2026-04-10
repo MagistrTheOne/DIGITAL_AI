@@ -5,7 +5,10 @@ import { and, count, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/services/db/client";
 import { employee } from "@/db/schema";
 
-import type { RenderStatus } from "@/features/employees/avatar-preview.types";
+import type {
+  AvatarRenderStage,
+  RenderStatus,
+} from "@/features/employees/avatar-preview.types";
 import type {
   EmployeeId,
   EmployeeListQuery,
@@ -24,6 +27,7 @@ export type EmployeeRecord = {
   avatar_render_status: RenderStatus;
   avatar_preview_job_id: string | null;
   avatar_preview_error: string | null;
+  avatar_render_stage: AvatarRenderStage | null;
   /** Optional https reference image for InfiniteTalk identity / sessions. */
   identity_reference_image_url: string | null;
   /** Wizard / config free-text; may include https URL for reference. */
@@ -49,7 +53,11 @@ export type EmployeeConfigJson = {
   identityClipGeneratedAt?: string | null;
   /** Which path produced the stored identity clip. */
   identityClipEngine?: "infinitetalk" | "runpod_preview" | "arachne_http";
+  /** Post-create auto digital-human pipeline lock (ISO); cleared on success/failure or stale after ~45m. */
+  autoDigitalHumanRunStartedAt?: string | null;
   roleCustomTitle?: string | null;
+  /** Phase within auto digital-human pipeline while `avatarRenderStatus === "generating"`. */
+  avatarRenderStage?: AvatarRenderStage | null;
   avatarRenderStatus?: RenderStatus | null;
   avatarPreviewJobId?: string | null;
   avatarPreviewError?: string | null;
@@ -101,6 +109,12 @@ function mapRow(r: typeof employee.$inferSelect): EmployeeRecord {
       typeof cfg.avatarPreviewJobId === "string" ? cfg.avatarPreviewJobId : null,
     avatar_preview_error:
       typeof cfg.avatarPreviewError === "string" ? cfg.avatarPreviewError : null,
+    avatar_render_stage:
+      cfg.avatarRenderStage === "face" ||
+      cfg.avatarRenderStage === "voice" ||
+      cfg.avatarRenderStage === "video"
+        ? cfg.avatarRenderStage
+        : null,
     identity_reference_image_url: identityRef || null,
     avatar_placeholder: placeholder || null,
   };
@@ -204,6 +218,7 @@ export async function countEmployeesForUser(userId: string): Promise<number> {
 
 export type AvatarPreviewStatePatch = {
   avatarRenderStatus?: RenderStatus | null;
+  avatarRenderStage?: AvatarRenderStage | null;
   avatarPreviewJobId?: string | null;
   avatarPreviewError?: string | null;
   videoPreviewUrl?: string | null;
@@ -222,6 +237,9 @@ export async function updateEmployeeAvatarPreviewState(
 
   if (patch.avatarRenderStatus !== undefined) {
     config.avatarRenderStatus = patch.avatarRenderStatus ?? undefined;
+  }
+  if (patch.avatarRenderStage !== undefined) {
+    config.avatarRenderStage = patch.avatarRenderStage ?? undefined;
   }
   if (patch.avatarPreviewJobId !== undefined) {
     config.avatarPreviewJobId = patch.avatarPreviewJobId;
@@ -332,6 +350,20 @@ export async function updateEmployeeRow(input: {
     .where(
       and(eq(employee.id, input.employeeId), eq(employee.userId, input.userId)),
     );
+
+  return true;
+}
+
+export async function deleteEmployeeRow(
+  employeeId: EmployeeId,
+  userId: string,
+): Promise<boolean> {
+  const row = await getEmployeeRowById(employeeId, userId);
+  if (!row) return false;
+
+  await db
+    .delete(employee)
+    .where(and(eq(employee.id, employeeId), eq(employee.userId, userId)));
 
   return true;
 }

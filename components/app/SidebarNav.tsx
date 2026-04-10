@@ -62,8 +62,12 @@ export const SidebarNav = React.memo(function SidebarNav() {
       <SidebarMenu>
         {NAV_ITEMS.map((item) => {
           const isActive =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href + "/"));
+            item.href === "/ai-digital"
+              ? pathname === "/ai-digital" ||
+                pathname.startsWith("/ai-digital/") ||
+                pathname.startsWith("/employees/")
+              : pathname === item.href ||
+                (item.href !== "/" && pathname.startsWith(item.href + "/"));
 
           return (
             <NavLinkItemMemo key={item.href} item={item} isActive={isActive} />

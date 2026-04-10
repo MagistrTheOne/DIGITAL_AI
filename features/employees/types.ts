@@ -1,4 +1,4 @@
-import type { RenderStatus } from "./avatar-preview.types";
+import type { AvatarRenderStage, RenderStatus } from "./avatar-preview.types";
 import type { AvatarVoiceMode } from "./avatar-voice.types";
 
 export type EmployeeRoleCategory =
@@ -24,6 +24,8 @@ export type EmployeeAvatarPreviewState = {
   renderStatus: RenderStatus;
   jobId: string | null;
   error: string | null;
+  /** Set while auto digital-human pipeline is running. */
+  renderStage: AvatarRenderStage | null;
 };
 
 export type EmployeeDTO = {

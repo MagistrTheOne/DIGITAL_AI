@@ -2,7 +2,10 @@
 
 import * as React from "react";
 
-import type { RenderStatus } from "@/features/employees/avatar-preview.types";
+import type {
+  AvatarRenderStage,
+  RenderStatus,
+} from "@/features/employees/avatar-preview.types";
 import {
   createAvatarIdentityClip,
   generateAvatarPreview,
@@ -11,11 +14,17 @@ import {
   pollJobUntilTerminal,
 } from "@/features/employees/avatar-preview-client";
 
-function statusLabel(status: RenderStatus, busy: boolean): string {
+function statusLabel(
+  status: RenderStatus,
+  busy: boolean,
+  autoDigitalHuman: boolean,
+): string {
   if (busy) return "Rendering…";
   switch (status) {
     case "generating":
-      return "Queued / rendering…";
+      return autoDigitalHuman
+        ? "Creating digital human…"
+        : "Queued / rendering…";
     case "ready":
       return "Preview ready";
     case "failed":
@@ -36,6 +45,9 @@ export function useAvatarPreviewGeneration(options: {
   identityClipEnabled?: boolean;
   identityClipImageUrl?: string | null;
   identityClipIntroText?: string;
+  /** Poll server for NULLXES auto post-deploy pipeline (OpenAI → ElevenLabs → InfiniteTalk). */
+  autoDigitalHumanEnabled?: boolean;
+  initialRenderStage?: AvatarRenderStage | null;
 }) {
   const {
     employeeId,
@@ -47,10 +59,15 @@ export function useAvatarPreviewGeneration(options: {
     identityClipEnabled = false,
     identityClipImageUrl = null,
     identityClipIntroText,
+    autoDigitalHumanEnabled = false,
+    initialRenderStage = null,
   } = options;
 
   const [renderStatus, setRenderStatus] = React.useState<RenderStatus>(
     initialRenderStatus,
+  );
+  const [renderStage, setRenderStage] = React.useState<AvatarRenderStage | null>(
+    initialRenderStage,
   );
   const [videoUrl, setVideoUrl] = React.useState<string | null>(initialVideoUrl);
   const [jobId, setJobId] = React.useState<string | null>(initialJobId);
@@ -62,16 +79,66 @@ export function useAvatarPreviewGeneration(options: {
 
   React.useEffect(() => {
     setRenderStatus(initialRenderStatus);
+    setRenderStage(initialRenderStage);
     setVideoUrl(initialVideoUrl);
     setJobId(initialJobId);
     setError(initialError);
   }, [
     initialRenderStatus,
+    initialRenderStage,
     initialVideoUrl,
     initialJobId,
     initialError,
     employeeId,
   ]);
+
+  React.useEffect(() => {
+    if (!autoDigitalHumanEnabled || renderStatus !== "generating") {
+      return;
+    }
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const res = await fetch(
+          `/api/employees/${encodeURIComponent(employeeId)}/avatar-generation-status`,
+        );
+        if (!res.ok || cancelled) return;
+        const body = (await res.json()) as {
+          status?: string;
+          stage?: AvatarRenderStage | null;
+          error?: string | null;
+          videoUrl?: string | null;
+        };
+        if (body.stage === "face" || body.stage === "voice" || body.stage === "video") {
+          setRenderStage(body.stage);
+        } else if (body.status !== "generating") {
+          setRenderStage(null);
+        }
+        if (body.status === "ready" && body.videoUrl?.trim()) {
+          setVideoUrl(body.videoUrl.trim());
+          setRenderStatus("ready");
+          setError(null);
+          setJobId(null);
+          onRefreshRef.current();
+          return;
+        }
+        if (body.status === "failed") {
+          setRenderStatus("failed");
+          setRenderStage(null);
+          setError(body.error?.trim() || "Generation failed");
+          onRefreshRef.current();
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    void tick();
+    const id = window.setInterval(() => void tick(), 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [autoDigitalHumanEnabled, renderStatus, employeeId]);
 
   const runPoll = React.useCallback(async (id: string) => {
     abortRef.current?.abort();
@@ -179,10 +246,40 @@ export function useAvatarPreviewGeneration(options: {
     runPoll,
   ]);
 
-  const retry = React.useCallback(() => {
+  const retry = React.useCallback(async () => {
+    if (autoDigitalHumanEnabled) {
+      setError(null);
+      setBusy(true);
+      try {
+        const res = await fetch(
+          `/api/employees/${encodeURIComponent(employeeId)}/avatar-generation-retry`,
+          { method: "POST" },
+        );
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) {
+          setRenderStatus("failed");
+          setError(body.error?.trim() || "Retry failed");
+          setBusy(false);
+          onRefreshRef.current();
+          return;
+        }
+        setRenderStatus("generating");
+        setRenderStage(null);
+        setVideoUrl(null);
+        setJobId(null);
+        setError(null);
+        setBusy(false);
+        onRefreshRef.current();
+      } catch {
+        setRenderStatus("failed");
+        setError("Retry failed");
+        setBusy(false);
+      }
+      return;
+    }
     setError(null);
     void generate();
-  }, [generate]);
+  }, [autoDigitalHumanEnabled, employeeId, generate]);
 
   React.useEffect(
     () => () => {
@@ -193,12 +290,13 @@ export function useAvatarPreviewGeneration(options: {
 
   return {
     renderStatus,
+    renderStage,
     videoUrl,
     jobId,
     error,
     busy,
     generate,
     retry,
-    label: statusLabel(renderStatus, busy),
+    label: statusLabel(renderStatus, busy, autoDigitalHumanEnabled),
   };
 }

@@ -1,11 +1,16 @@
 "use server";
 
-import type { RenderStatus } from "@/features/employees/avatar-preview.types";
+import type {
+  AvatarRenderStage,
+  RenderStatus,
+} from "@/features/employees/avatar-preview.types";
 import {
   createEmployee,
+  deleteEmployee,
   ensureDraftEmployee,
   finalizeDraftEmployee,
   getEmployeeForDashboard,
+  updateEmployee,
 } from "@/features/employees/service.server";
 import type { CreateEmployeeInput } from "@/features/employees/types";
 
@@ -35,13 +40,28 @@ export async function finalizeDraftEmployeeAction(
   return finalizeDraftEmployee(draftEmployeeId, input);
 }
 
+export async function updateEmployeeAction(
+  employeeId: string,
+  input: CreateEmployeeInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  return updateEmployee(employeeId, input);
+}
+
+export async function deleteEmployeeAction(
+  employeeId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  return deleteEmployee(employeeId);
+}
+
 export async function getEmployeeAvatarPreviewStateAction(employeeId: string): Promise<
   | {
       ok: true;
       renderStatus: RenderStatus;
+      renderStage: AvatarRenderStage | null;
       videoUrl: string | null;
       jobId: string | null;
       error: string | null;
+      identityImageUrl: string | null;
     }
   | { ok: false; error: string }
 > {
@@ -52,8 +72,10 @@ export async function getEmployeeAvatarPreviewStateAction(employeeId: string): P
   return {
     ok: true,
     renderStatus: employee.avatarPreview?.renderStatus ?? "idle",
+    renderStage: employee.avatarPreview?.renderStage ?? null,
     videoUrl: employee.videoPreview?.src ?? null,
     jobId: employee.avatarPreview?.jobId ?? null,
     error: employee.avatarPreview?.error ?? null,
+    identityImageUrl: employee.identityClipImageUrl?.trim() ?? null,
   };
 }
