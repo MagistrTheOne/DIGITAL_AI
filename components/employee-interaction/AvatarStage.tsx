@@ -6,6 +6,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 import type { ArachneXEvent } from "@/features/arachne-x/event-system/eventTypes";
 import { useAvatarArachneVideoStream } from "@/features/arachne-x/client/useAvatarArachneVideoStream";
+import {
+  avatarStateFooterHint,
+  type AvatarState,
+} from "@/features/employees/avatar-digital-human.types";
 import type { AvatarSegmentOverlay } from "@/features/employees/useAvatarRenderPipeline";
 import type { EmployeeVideoPreview } from "@/features/employees/types";
 
@@ -25,6 +29,7 @@ export function AvatarStage({
   arachneStreamEnabled = false,
   subscribeArachne,
   segmentOverlay,
+  digitalHumanState,
 }: {
   displayName: string;
   videoPreview?: EmployeeVideoPreview;
@@ -33,6 +38,8 @@ export function AvatarStage({
   subscribeArachne?: (cb: (ev: ArachneXEvent) => void) => () => void;
   /** RunPod segment clips: realtime first, optional enhanced crossfade (muted; Realtime audio stays primary). */
   segmentOverlay?: AvatarSegmentOverlay | null;
+  /** Optional: audio-first perception state (does not change layout). */
+  digitalHumanState?: AvatarState;
 }) {
   const letter = initials(displayName);
   const src = videoPreview?.src?.trim();
@@ -44,6 +51,10 @@ export function AvatarStage({
     segmentOverlay &&
     (segmentOverlay.realtimeSrc || segmentOverlay.enhancedSrc);
 
+  const perceptionHint = digitalHumanState
+    ? avatarStateFooterHint(digitalHumanState)
+    : null;
+
   const footerLabel = showLiveCanvas
     ? "Live stream · ARACHNE-X (JPEG)"
     : showStubOverlay
@@ -53,6 +64,11 @@ export function AvatarStage({
         : src
           ? "Preview clip · live stream when ARACHNE sends JPEG chunks"
           : "Live avatar · connect ARACHNE WS";
+
+  const footerSecondary =
+    perceptionHint && digitalHumanState !== "idle"
+      ? ` · ${perceptionHint}`
+      : "";
 
   return (
     <div className="flex w-full max-w-md flex-col items-center">
@@ -147,6 +163,7 @@ export function AvatarStage({
 
         <div className="absolute inset-x-0 bottom-0 border-t border-neutral-800/80 bg-neutral-950/85 px-3 py-2 text-center text-[11px] font-medium uppercase tracking-wider text-neutral-500 backdrop-blur-sm">
           {footerLabel}
+          {footerSecondary}
         </div>
       </div>
     </div>

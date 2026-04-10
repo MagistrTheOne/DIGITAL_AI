@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { enqueueAvatarRenderJobs } from "@/lib/avatar/renderer.server";
-
-/** InfiniteTalk uses RunPod `runsync` — allow long serverless duration when deployed on Vercel. */
-export const maxDuration = 180;
 import type { AvatarRenderRequestBody } from "@/lib/avatar/types";
 import { normalizeAvatarEngine } from "@/lib/avatar/types";
 import { getCurrentSession } from "@/lib/auth/session.server";
+
+/** InfiniteTalk uses RunPod `runsync` — allow long serverless duration when deployed on Vercel. */
+export const maxDuration = 180;
 
 export async function POST(req: Request) {
   const session = await getCurrentSession();

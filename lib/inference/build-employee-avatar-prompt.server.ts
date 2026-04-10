@@ -89,15 +89,18 @@ export function buildSessionSegmentT2vPrompts(
   };
 }
 
-/** Positive prompt for RunPod InfiniteTalk (identity + dialogue hint for motion). */
+const INFINITETALK_SEGMENT_SUFFIX =
+  " professional, realistic lighting, clean face";
+
+/** Positive prompt for RunPod InfiniteTalk (aligned with one-shot identity clip). */
 export function buildInfiniteTalkPrompt(
   ctx: EmployeeAvatarPromptContext,
   segmentText: string,
 ): string {
   const identity = buildEmployeeAvatarPrompts(ctx).positivePrompt;
-  const t = segmentText.trim().slice(0, 600);
+  const t = segmentText.trim().slice(0, 320);
   if (!t) {
-    return `${identity} Speaking naturally to camera, subtle expressions, professional office lighting.`;
+    return `${identity} speaking naturally to camera, subtle expressions${INFINITETALK_SEGMENT_SUFFIX}`;
   }
-  return `${identity} Speaking with clear articulation; dialogue: ${t}`;
+  return `${identity} speaking: ${t}${INFINITETALK_SEGMENT_SUFFIX}`;
 }

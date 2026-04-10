@@ -22,7 +22,7 @@ import {
 import { isIdentityClipInfrastructureConfigured } from "@/lib/avatar/identity-clip-env.server";
 
 const VOICE_ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
-const PROMPT_SUFFIX = " professional, realistic, clean lighting";
+const PROMPT_SUFFIX = " professional, realistic lighting, clean face";
 const DEFAULT_INTRO_TEXT =
   "Hello. I'm your digital colleague and I'm here to help.";
 const SIZE = "480p" as const;
@@ -74,17 +74,8 @@ export async function runEmployeeIdentityClip(input: {
   | { ok: true; videoUrl: string; cached: boolean }
   | { ok: false; error: string; httpStatus: number }
 > {
-  if (!isIdentityClipInfrastructureConfigured()) {
-    return {
-      ok: false,
-      error:
-        "Identity clip is not configured (RUNPOD_API_KEY, ELEVENLABS_API_KEY, and BLOB_READ_WRITE_TOKEN required in production).",
-      httpStatus: 503,
-    };
-  }
-
-  const imageUrl = input.imageUrl.trim();
-  if (!/^https?:\/\//i.test(imageUrl)) {
+  const imageUrlEarly = input.imageUrl.trim();
+  if (!/^https?:\/\//i.test(imageUrlEarly)) {
     return {
       ok: false,
       error: "imageUrl must be a public https URL.",
@@ -96,6 +87,26 @@ export async function runEmployeeIdentityClip(input: {
   if (!row) {
     return { ok: false, error: "Employee not found", httpStatus: 404 };
   }
+
+  if (!isIdentityClipInfrastructureConfigured()) {
+    const msg =
+      "Identity clip is not configured (RUNPOD_API_KEY, ELEVENLABS_API_KEY, and BLOB_READ_WRITE_TOKEN required in production).";
+    await updateEmployeeRow({
+      employeeId: input.employeeId,
+      userId: input.userId,
+      config: {
+        avatarRenderStatus: "failed",
+        avatarPreviewError: msg,
+      },
+    });
+    return {
+      ok: false,
+      error: msg,
+      httpStatus: 503,
+    };
+  }
+
+  const imageUrl = imageUrlEarly;
 
   const cfg = (row.config ?? {}) as EmployeeConfigJson;
   const segmentText =

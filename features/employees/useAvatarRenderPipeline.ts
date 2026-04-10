@@ -2,6 +2,11 @@
 
 import * as React from "react";
 
+import {
+  AVATAR_SEGMENT_TEXT_MAX_CHARS,
+  type VideoSegment,
+} from "@/features/employees/avatar-digital-human.types";
+
 export type AvatarSegmentOverlay = {
   sequence: number;
   realtimeSrc: string | null;
@@ -32,10 +37,15 @@ export function useAvatarRenderPipeline(input: {
 }): {
   notifyAssistantSegment: (text: string) => void;
   segmentOverlay: AvatarSegmentOverlay | null;
+  /** Visual queue metadata (audio is independent; late clips skipped via sequence). */
+  videoSegment: VideoSegment | null;
 } {
   const latestSeqRef = React.useRef(0);
   const [segmentOverlay, setSegmentOverlay] =
     React.useState<AvatarSegmentOverlay | null>(null);
+  const [videoSegment, setVideoSegment] = React.useState<VideoSegment | null>(
+    null,
+  );
 
   const { enabled, sessionId, employeeId, hybridEnhance } = input;
 
@@ -43,12 +53,19 @@ export function useAvatarRenderPipeline(input: {
     (text: string) => {
       if (!enabled || !text.trim()) return;
 
+      const trimmed = text.trim().slice(0, AVATAR_SEGMENT_TEXT_MAX_CHARS);
+      if (!trimmed) return;
+
       const seq = ++latestSeqRef.current;
       setSegmentOverlay({
         sequence: seq,
         realtimeSrc: null,
         enhancedSrc: null,
         enhancedActive: false,
+      });
+      setVideoSegment({
+        sequence: seq,
+        status: "pending",
       });
 
       void (async () => {
@@ -60,15 +77,33 @@ export function useAvatarRenderPipeline(input: {
               sessionId,
               employeeId,
               sequence: seq,
-              text: text.trim(),
+              text: trimmed,
               hybridEnhance,
             }),
           });
-          if (!res.ok) return;
+          if (!res.ok) {
+            setSegmentOverlay((prev) =>
+              prev?.sequence === seq ? null : prev,
+            );
+            setVideoSegment((prev) =>
+              prev?.sequence === seq ? null : prev,
+            );
+            return;
+          }
           const data = (await res.json()) as { jobs?: RenderJobDto[] };
           const jobs = Array.isArray(data.jobs) ? data.jobs : [];
           const rt = jobs.find((j) => j.videoTier === "realtime");
           const hq = jobs.find((j) => j.videoTier === "enhanced");
+
+          if (!rt?.jobId && !hq?.jobId) {
+            setSegmentOverlay((prev) =>
+              prev?.sequence === seq ? null : prev,
+            );
+            setVideoSegment((prev) =>
+              prev?.sequence === seq ? null : prev,
+            );
+            return;
+          }
 
           const pollJob = async (
             jobId: string,
@@ -104,6 +139,11 @@ export function useAvatarRenderPipeline(input: {
                   ? { ...prev, realtimeSrc: videoUrl }
                   : prev,
               );
+              setVideoSegment((prev) =>
+                prev && prev.sequence === seq
+                  ? { ...prev, status: "ready", videoUrl }
+                  : prev,
+              );
             });
           }
 
@@ -119,6 +159,11 @@ export function useAvatarRenderPipeline(input: {
                     }
                   : prev,
               );
+              setVideoSegment((prev) =>
+                prev && prev.sequence === seq
+                  ? { ...prev, status: "ready", enhancedUrl: videoUrl }
+                  : prev,
+              );
             });
           }
         } catch {
@@ -129,5 +174,5 @@ export function useAvatarRenderPipeline(input: {
     [enabled, sessionId, employeeId, hybridEnhance],
   );
 
-  return { notifyAssistantSegment, segmentOverlay };
+  return { notifyAssistantSegment, segmentOverlay, videoSegment };
 }

@@ -24,6 +24,7 @@ import { postEndAiWorkspaceSession } from "@/features/employees/analyticsSession
 import { postEmployeeOpenAiChat } from "@/features/employees/openaiChat.client";
 import { useEmployeeOpenAiSessions } from "@/features/employees/useEmployeeOpenAiSessions";
 import { useEmployeeRealtimeVoice } from "@/features/employees/useEmployeeRealtimeVoice";
+import { deriveAvatarPresentationState } from "@/features/employees/avatar-digital-human.types";
 import { useAvatarRenderPipeline } from "@/features/employees/useAvatarRenderPipeline";
 import type { EmployeeSessionBootstrapDTO } from "@/features/employees/types";
 
@@ -76,12 +77,13 @@ export function EmployeeInteractionPage({
   const avatarBootstrap = React.useMemo(() => toAvatarBootstrap(bootstrap), [bootstrap]);
 
   const avatarPipelineEnabled = Boolean(bootstrap.avatarRenderPipelineEnabled);
-  const { notifyAssistantSegment, segmentOverlay } = useAvatarRenderPipeline({
-    enabled: avatarPipelineEnabled,
-    sessionId: bootstrap.sessionId,
-    employeeId,
-    hybridEnhance: Boolean(bootstrap.avatarRenderHybridDefault),
-  });
+  const { notifyAssistantSegment, segmentOverlay, videoSegment } =
+    useAvatarRenderPipeline({
+      enabled: avatarPipelineEnabled,
+      sessionId: bootstrap.sessionId,
+      employeeId,
+      hybridEnhance: Boolean(bootstrap.avatarRenderHybridDefault),
+    });
 
   const {
     connect,
@@ -441,6 +443,16 @@ export function EmployeeInteractionPage({
     bootstrap.employee.videoPreview,
   ]);
 
+  const digitalHumanState = React.useMemo(
+    () =>
+      deriveAvatarPresentationState({
+        voiceState,
+        pipelineEnabled: avatarPipelineEnabled,
+        videoSegment,
+      }),
+    [voiceState, avatarPipelineEnabled, videoSegment],
+  );
+
   const realtimeError =
     !bootstrap.realtime.ok
       ? bootstrap.realtime.error
@@ -486,6 +498,11 @@ export function EmployeeInteractionPage({
               bootstrap.realtime.ok ? subscribeEvents : undefined
             }
             segmentOverlay={avatarPipelineEnabled ? segmentOverlay : null}
+            digitalHumanState={
+              avatarPipelineEnabled || realtimeVoiceActive
+                ? digitalHumanState
+                : undefined
+            }
           />
           <AvatarPreviewSection
             employeeId={employeeId}
