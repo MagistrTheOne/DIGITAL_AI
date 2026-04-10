@@ -339,7 +339,17 @@ export async function ensureDraftEmployee(
   try {
     if (draftEmployeeId?.trim()) {
       const row = await getEmployeeRowById(draftEmployeeId.trim(), userId);
-      if (!row) return { ok: false, error: "Draft not found." };
+      if (!row) {
+        // Stale browser draft id (e.g. new DB / Neon branch, cleared data, or deleted row).
+        const { id } = await insertEmployeeRow({
+          userId,
+          name,
+          role,
+          status: "draft",
+          config,
+        });
+        return { ok: true, employeeId: id };
+      }
       if (row.status !== "draft") {
         return { ok: false, error: "This employee is no longer a draft." };
       }
@@ -388,7 +398,10 @@ export async function finalizeDraftEmployee(
   if (!roleCheck.ok) return roleCheck;
 
   const row = await getEmployeeRowById(draftEmployeeId.trim(), userId);
-  if (!row) return { ok: false, error: "Draft not found." };
+  if (!row) {
+    // Same stale-id case as ensureDraftEmployee: deploy as a new active employee.
+    return createEmployee(input);
+  }
   if (row.status !== "draft") {
     return { ok: false, error: "This employee is already deployed." };
   }

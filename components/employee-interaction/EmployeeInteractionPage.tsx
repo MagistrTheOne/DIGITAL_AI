@@ -14,7 +14,9 @@ import type {
 import { AvatarPreviewSection } from "@/components/employee-interaction/AvatarPreviewSection";
 import { VoiceControlButton } from "@/components/employee-interaction/VoiceControlButton";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Trash2 } from "lucide-react";
 import type { ArachneXEvent } from "@/features/arachne-x/event-system/eventTypes";
 import { useAvatarRuntime } from "@/features/arachne-x/client/useAvatarRuntime";
@@ -202,6 +204,7 @@ export function EmployeeInteractionPage({
   const [syncPlayback, setSyncPlayback] = React.useState<AvatarSyncResponse | null>(
     null,
   );
+  const [loopHoverAudio, setLoopHoverAudio] = React.useState(true);
 
   const appendTranscriptMessage = React.useCallback(
     (m: InteractionMessage) => {
@@ -503,6 +506,13 @@ export function EmployeeInteractionPage({
         ? avatarState.lastError
         : null;
 
+  const suppressMintRealtimeBanner = (msg: string) =>
+    /mint/i.test(msg) && /404/.test(msg);
+
+  const showRealtimeErrorBanner =
+    Boolean(realtimeError) &&
+    !suppressMintRealtimeBanner(realtimeError ?? "");
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
       <EmployeeHeader
@@ -526,7 +536,7 @@ export function EmployeeInteractionPage({
         </div>
       ) : null}
 
-      {realtimeError ? (
+      {showRealtimeErrorBanner ? (
         <div className="mx-6 mt-2 rounded-lg border border-amber-900/60 bg-amber-950/30 px-3 py-2 text-xs text-amber-200/90">
           Realtime: {realtimeError}
         </div>
@@ -551,7 +561,24 @@ export function EmployeeInteractionPage({
               avatarVoiceMode === "sync" ? syncPlayback : null
             }
             onSyncPlaybackEnd={() => setSyncPlayback(null)}
+            allowLoopHoverAudio={loopHoverAudio}
           />
+          {stageVideoPreview?.src?.trim() ? (
+            <div className="flex w-full max-w-md items-center justify-between gap-3 px-1">
+              <Label
+                htmlFor="nullxes-loop-hover-audio"
+                className="cursor-pointer text-xs text-neutral-500"
+              >
+                Loop audio
+              </Label>
+              <Switch
+                id="nullxes-loop-hover-audio"
+                size="sm"
+                checked={loopHoverAudio}
+                onCheckedChange={setLoopHoverAudio}
+              />
+            </div>
+          ) : null}
           <AvatarPreviewSection
             employeeId={employeeId}
             visible={avatarPreviewVisible}
@@ -568,6 +595,7 @@ export function EmployeeInteractionPage({
             initialVideoUrl={bootstrap.employee.videoPreview?.src ?? null}
             initialJobId={bootstrap.employee.avatarPreview?.jobId ?? null}
             initialError={bootstrap.employee.avatarPreview?.error ?? null}
+            hideInlineVideoIfUrlMatches={stageVideoPreview?.src ?? null}
           />
           <VoiceControlButton
             state={voiceState}

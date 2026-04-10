@@ -192,13 +192,13 @@ export function PreviewPanel({
               Portrait preview (GPT Image)
             </div>
             {portraitUrl ? (
-              <div className="overflow-hidden rounded-md border border-neutral-800 bg-black/40">
+              <figure className="mx-auto w-[min(100%,20rem)] shrink-0 overflow-hidden rounded-md border border-neutral-800 bg-black/40 sm:mx-0">
                 <img
                   src={portraitUrl}
                   alt="Generated portrait preview"
-                  className="aspect-square w-full max-w-xs object-cover"
+                  className="aspect-square h-auto w-full object-cover"
                 />
-              </div>
+              </figure>
             ) : (
               <p className="text-[11px] text-neutral-500">
                 No portrait yet — same pipeline as auto digital human (OpenAI →

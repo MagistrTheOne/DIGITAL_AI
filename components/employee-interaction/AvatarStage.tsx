@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { Loader2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -35,6 +36,8 @@ export function AvatarStage({
   digitalHumanState,
   syncPlayback,
   onSyncPlaybackEnd,
+  /** When false, loop clip stays muted; hover does not unmute (parent can add a toolbar toggle). */
+  allowLoopHoverAudio = true,
 }: {
   displayName: string;
   videoPreview?: EmployeeVideoPreview;
@@ -48,12 +51,57 @@ export function AvatarStage({
   /** Lip-sync mode: ElevenLabs audio + optional InfiniteTalk video (same turn). */
   syncPlayback?: AvatarSyncResponse | null;
   onSyncPlaybackEnd?: () => void;
+  allowLoopHoverAudio?: boolean;
 }) {
   const letter = initials(displayName);
   const src = videoPreview?.src?.trim();
 
   const { canvasRef, containerRef, showStubOverlay, showLiveCanvas } =
     useAvatarArachneVideoStream(subscribeArachne, arachneStreamEnabled);
+
+  const loopVideoRef = React.useRef<HTMLVideoElement | null>(null);
+  const [loopMuted, setLoopMuted] = React.useState(true);
+
+  React.useEffect(() => {
+    setLoopMuted(true);
+    const v = loopVideoRef.current;
+    if (v) v.muted = true;
+  }, [src]);
+
+  React.useEffect(() => {
+    if (showLiveCanvas) {
+      setLoopMuted(true);
+      const v = loopVideoRef.current;
+      if (v) v.muted = true;
+    }
+  }, [showLiveCanvas]);
+
+  React.useEffect(() => {
+    if (!allowLoopHoverAudio) {
+      setLoopMuted(true);
+      const v = loopVideoRef.current;
+      if (v) v.muted = true;
+    }
+  }, [allowLoopHoverAudio]);
+
+  const onLoopPointerEnter = React.useCallback(() => {
+    if (showLiveCanvas || !src || !allowLoopHoverAudio) return;
+    const v = loopVideoRef.current;
+    if (!v) return;
+    v.muted = false;
+    setLoopMuted(false);
+    void v.play().catch(() => {
+      v.muted = true;
+      setLoopMuted(true);
+    });
+  }, [allowLoopHoverAudio, showLiveCanvas, src]);
+
+  const onLoopPointerLeave = React.useCallback(() => {
+    const v = loopVideoRef.current;
+    if (!v) return;
+    v.muted = true;
+    setLoopMuted(true);
+  }, []);
 
   const hasSegment =
     segmentOverlay &&
@@ -72,7 +120,7 @@ export function AvatarStage({
         : src
           ? arachneStreamEnabled
             ? "Loop clip + live face when ARACHNE streams JPEG"
-            : "Digital human · InfiniteTalk clip (loop)"
+            : "NULLXES DIGITAL HUMAN"
           : arachneStreamEnabled
             ? "Connect ARACHNE WS for live face"
             : "No clip yet · run auto avatar or identity preview";
@@ -86,7 +134,18 @@ export function AvatarStage({
     <div className="flex w-full max-w-md flex-col items-center">
       <div
         className="relative aspect-4/3 w-full overflow-hidden rounded-3xl border border-neutral-800 bg-linear-to-br from-neutral-900 via-neutral-950 to-black shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
-        aria-label={src ? "Avatar preview video" : "Avatar stream placeholder"}
+        aria-label={
+          src && !showLiveCanvas && allowLoopHoverAudio
+            ? "Avatar preview video · hover for sound"
+            : src
+              ? "Avatar preview video"
+              : "Avatar stream placeholder"
+        }
+        title={
+          src && !showLiveCanvas && allowLoopHoverAudio
+            ? "Hover for sound"
+            : undefined
+        }
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(120,120,120,0.12),transparent_55%)]" />
 
@@ -99,14 +158,25 @@ export function AvatarStage({
         >
           {src ? (
             <video
+              ref={loopVideoRef}
               className="absolute inset-0 size-full object-cover"
               src={src}
               controls={!showLiveCanvas}
               playsInline
               loop
-              muted
+              muted={showLiveCanvas ? true : loopMuted}
               preload="metadata"
               autoPlay={!showLiveCanvas}
+              onPointerEnter={
+                !showLiveCanvas && allowLoopHoverAudio
+                  ? onLoopPointerEnter
+                  : undefined
+              }
+              onPointerLeave={
+                !showLiveCanvas && allowLoopHoverAudio
+                  ? onLoopPointerLeave
+                  : undefined
+              }
             />
           ) : (
             <div className="flex size-full items-center justify-center">

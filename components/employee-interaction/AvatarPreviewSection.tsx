@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 
 import { VideoPlayer } from "@/components/media/VideoPlayer";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type {
   AvatarRenderStage,
   RenderStatus,
@@ -29,6 +36,8 @@ export function AvatarPreviewSection({
   className,
   /** When set (e.g. create wizard), avoids full route refresh that would reset client state. */
   onRefreshOverride,
+  /** Employee page: `AvatarStage` already loops this URL — skip duplicate player + status line. */
+  hideInlineVideoIfUrlMatches = null,
 }: {
   employeeId: string;
   /** When false, entire block hidden (no ARACHNE and no in-flight preview). */
@@ -48,6 +57,7 @@ export function AvatarPreviewSection({
   initialRenderStage?: AvatarRenderStage | null;
   className?: string;
   onRefreshOverride?: () => void;
+  hideInlineVideoIfUrlMatches?: string | null;
 }) {
   const router = useRouter();
   const onRefresh = React.useCallback(() => {
@@ -100,10 +110,35 @@ export function AvatarPreviewSection({
     (preview.renderStatus === "generating" || preview.busy) &&
     !preview.videoUrl;
   const showVideo = Boolean(preview.videoUrl);
+  const stageClip = hideInlineVideoIfUrlMatches?.trim() ?? "";
+  const previewClip = preview.videoUrl?.trim() ?? "";
+  const inlineVideoRedundant =
+    Boolean(stageClip && previewClip && stageClip === previewClip);
+  const showInlineVideo = showVideo && !inlineVideoRedundant;
+
+  const showStatusLine =
+    !showAutoHumanProgress &&
+    !showSkeleton &&
+    !preview.error &&
+    !(
+      inlineVideoRedundant &&
+      preview.renderStatus === "ready" &&
+      !preview.busy
+    );
+
+  const hasSuccessfulClip =
+    preview.renderStatus === "ready" &&
+    !preview.busy &&
+    !preview.error &&
+    (Boolean(preview.videoUrl?.trim()) || inlineVideoRedundant);
+
+  const tuckGenerateInToolsPanel = canGenerate && hasSuccessfulClip;
+
+  const [avatarToolsOpen, setAvatarToolsOpen] = React.useState(false);
 
   return (
     <div className={className ?? "flex max-w-md flex-col items-center gap-2 px-2"}>
-      {showVideo ? (
+      {showInlineVideo ? (
         <div className="w-full overflow-hidden rounded-lg border border-neutral-800 bg-black/40">
           <VideoPlayer
             key={preview.videoUrl ?? "v"}
@@ -158,11 +193,52 @@ export function AvatarPreviewSection({
         </div>
       ) : null}
 
-      <p className="text-center text-[10px] leading-snug text-neutral-500">
-        {preview.label}
-      </p>
+      {showStatusLine ? (
+        <p className="text-center text-[10px] leading-snug text-neutral-500">
+          {preview.label}
+        </p>
+      ) : null}
 
-      {canGenerate ? (
+      {canGenerate && tuckGenerateInToolsPanel ? (
+        <Collapsible
+          open={avatarToolsOpen}
+          onOpenChange={setAvatarToolsOpen}
+          className="w-full max-w-sm rounded-lg border border-neutral-800/80 bg-neutral-950/40 px-2 py-1.5"
+        >
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-full justify-between gap-2 px-2 text-xs text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200"
+            >
+              <span>Avatar tools</span>
+              <ChevronDown
+                className={cn(
+                  "size-4 shrink-0 transition-transform duration-200",
+                  avatarToolsOpen && "rotate-180",
+                )}
+                aria-hidden
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="flex flex-col gap-2 pb-2 pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="border-neutral-700 bg-neutral-900 text-neutral-200 hover:bg-neutral-800"
+              disabled={preview.busy}
+              onClick={() => void preview.generate()}
+            >
+              {preview.busy ? "Working…" : "Generate avatar preview"}
+            </Button>
+            <p className="text-center text-[10px] leading-snug text-neutral-600">
+              Regenerate InfiniteTalk / preview when you change look or voice.
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : canGenerate ? (
         <Button
           type="button"
           variant="secondary"

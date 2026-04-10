@@ -224,7 +224,8 @@ export async function runEmployeeIdentityClip(input: {
         avatarPreviewError: sync.error,
       },
     });
-    return { ok: false, error: sync.error, httpStatus: 502 };
+    const httpStatus = sync.kind === "validation" ? 400 : 502;
+    return { ok: false, error: sync.error, httpStatus };
   }
 
   let blobVideoUrl: string;
