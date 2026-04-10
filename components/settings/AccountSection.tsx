@@ -21,6 +21,7 @@ import {
   removeAvatarAction,
   uploadAvatarAction,
 } from "@/features/account/avatar-actions.server";
+import { updateAccountDisplayNameAction } from "@/features/account/profile-actions.server";
 import { resizeImageFileForAvatar } from "@/lib/utils/resize-image-client";
 import { cn } from "@/lib/utils";
 
@@ -36,11 +37,14 @@ export function AccountSection() {
   const [name, setName] = React.useState(account.name);
   const [pending, startTransition] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
+  const [nameSavedHint, setNameSavedHint] = React.useState(false);
   const [localPreview, setLocalPreview] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const nameDirty = name.trim() !== account.name.trim();
 
   React.useEffect(() => {
     setName(account.name);
+    setNameSavedHint(false);
   }, [account.name]);
 
   React.useEffect(() => {
@@ -95,6 +99,21 @@ export function AccountSection() {
         setError(result.error);
         return;
       }
+      router.refresh();
+    });
+  };
+
+  const onSaveDisplayName = () => {
+    setError(null);
+    setNameSavedHint(false);
+    startTransition(async () => {
+      const result = await updateAccountDisplayNameAction(name);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setName(result.name);
+      setNameSavedHint(true);
       router.refresh();
     });
   };
@@ -180,11 +199,32 @@ export function AccountSection() {
               <Input
                 id="settings-name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setNameSavedHint(false);
+                }}
                 className="border-neutral-800 bg-neutral-900/80 text-neutral-100"
               />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="border-neutral-600 bg-neutral-800 text-neutral-100 hover:bg-neutral-700"
+                  disabled={pending || !nameDirty}
+                  onClick={onSaveDisplayName}
+                >
+                  {pending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : null}
+                  Save name
+                </Button>
+                {nameSavedHint ? (
+                  <span className="text-xs text-emerald-500/90">Saved.</span>
+                ) : null}
+              </div>
               <p className="text-xs text-neutral-600">
-                Profile name updates will sync when account API is wired.
+                Shown in the sidebar and across your workspace.
               </p>
             </div>
             {account.organization ? (

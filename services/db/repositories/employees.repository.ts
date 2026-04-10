@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, count, eq, ne, sql } from "drizzle-orm";
 
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { employee } from "@/db/schema";
 
 import type { RenderStatus } from "@/features/employees/avatar-preview.types";

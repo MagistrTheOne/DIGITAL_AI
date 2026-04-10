@@ -1,4 +1,4 @@
-import { sql } from "@/app/lib/db";
+import { sql } from "@/services/db/client";
 import { NextResponse } from "next/server";
 
 export async function GET() {

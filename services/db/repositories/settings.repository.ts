@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { userSettings } from "@/db/schema";
 
 export type UserSettingsPatch = {

@@ -4,8 +4,9 @@ import { Loader2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-import type { ArachineXEvent } from "@/features/arachine-x/event-system/eventTypes";
-import { useAvatarArachneVideoStream } from "@/features/arachine-x/client/useAvatarArachneVideoStream";
+import type { ArachneXEvent } from "@/features/arachne-x/event-system/eventTypes";
+import { useAvatarArachneVideoStream } from "@/features/arachne-x/client/useAvatarArachneVideoStream";
+import type { AvatarSegmentOverlay } from "@/features/employees/useAvatarRenderPipeline";
 import type { EmployeeVideoPreview } from "@/features/employees/types";
 
 function initials(name: string) {
@@ -23,12 +24,15 @@ export function AvatarStage({
   videoPreview,
   arachneStreamEnabled = false,
   subscribeArachne,
+  segmentOverlay,
 }: {
   displayName: string;
   videoPreview?: EmployeeVideoPreview;
   /** When true and `subscribeArachne` is set, wire `avatar.*` WS events into the canvas layer. */
   arachneStreamEnabled?: boolean;
-  subscribeArachne?: (cb: (ev: ArachineXEvent) => void) => () => void;
+  subscribeArachne?: (cb: (ev: ArachneXEvent) => void) => () => void;
+  /** RunPod segment clips: realtime first, optional enhanced crossfade (muted; Realtime audio stays primary). */
+  segmentOverlay?: AvatarSegmentOverlay | null;
 }) {
   const letter = initials(displayName);
   const src = videoPreview?.src?.trim();
@@ -36,13 +40,19 @@ export function AvatarStage({
   const { canvasRef, containerRef, showStubOverlay, showLiveCanvas } =
     useAvatarArachneVideoStream(subscribeArachne, arachneStreamEnabled);
 
+  const hasSegment =
+    segmentOverlay &&
+    (segmentOverlay.realtimeSrc || segmentOverlay.enhancedSrc);
+
   const footerLabel = showLiveCanvas
     ? "Live stream · ARACHNE-X (JPEG)"
     : showStubOverlay
       ? "Avatar stream · waiting for frames (stub)"
-      : src
-        ? "Preview clip · live stream when ARACHNE sends JPEG chunks"
-        : "Live avatar · connect ARACHNE WS";
+      : hasSegment
+        ? "Segment video · RunPod (muted overlay · Realtime audio)"
+        : src
+          ? "Preview clip · live stream when ARACHNE sends JPEG chunks"
+          : "Live avatar · connect ARACHNE WS";
 
   return (
     <div className="flex w-full max-w-md flex-col items-center">
@@ -92,6 +102,38 @@ export function AvatarStage({
             aria-hidden={!showLiveCanvas}
           />
         </div>
+
+        {hasSegment ? (
+          <div
+            className="pointer-events-none absolute inset-0 z-5"
+            aria-hidden
+          >
+            {segmentOverlay.realtimeSrc ? (
+              <video
+                key={`rt-${segmentOverlay.sequence}-${segmentOverlay.realtimeSrc}`}
+                className="absolute inset-0 size-full object-cover"
+                src={segmentOverlay.realtimeSrc}
+                muted
+                playsInline
+                autoPlay
+                preload="auto"
+              />
+            ) : null}
+            {segmentOverlay.enhancedSrc ? (
+              <video
+                key={`hq-${segmentOverlay.sequence}-${segmentOverlay.enhancedSrc}`}
+                className={`absolute inset-0 size-full object-cover transition-opacity duration-300 ease-out ${
+                  segmentOverlay.enhancedActive ? "opacity-100" : "opacity-0"
+                }`}
+                src={segmentOverlay.enhancedSrc}
+                muted
+                playsInline
+                autoPlay
+                preload="auto"
+              />
+            ) : null}
+          </div>
+        ) : null}
 
         {showStubOverlay ? (
           <div

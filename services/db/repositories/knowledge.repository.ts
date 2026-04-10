@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, desc, eq, sql } from "drizzle-orm";
 
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { knowledgeChunk, knowledgeDocument } from "@/db/schema";
 
 export type KnowledgeDocumentPublic = {

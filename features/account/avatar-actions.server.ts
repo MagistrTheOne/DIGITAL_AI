@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 import { getCurrentSession } from "@/lib/auth/session.server";
 import { storeUserAvatar } from "@/lib/storage/avatar-storage";
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { user } from "@/db/schema";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);

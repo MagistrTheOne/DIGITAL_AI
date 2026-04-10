@@ -1,4 +1,4 @@
-import { requestArachneAvatarPreview } from "@/features/arachine-x/server/arachneAvatarPreview.server";
+import { requestArachneAvatarPreview } from "@/features/arachne-x/server/arachneAvatarPreview.server";
 import {
   buildEmployeeAvatarPromptContext,
   buildEmployeeAvatarPrompts,

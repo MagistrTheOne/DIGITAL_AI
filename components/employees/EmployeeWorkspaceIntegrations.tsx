@@ -1,29 +1,17 @@
-import { getCurrentSession } from "@/lib/auth/session.server";
 import { isIntegrationsEncryptionConfigured } from "@/lib/integrations/secret.server";
 import { ClientApiIntegrationsPanel } from "@/components/employees/ClientApiIntegrationsPanel";
 import { KnowledgeUploadPanel } from "@/components/employees/KnowledgeUploadPanel";
-import { getEmployeeRowById } from "@/services/db/repositories/employees.repository";
-import {
-  listClientIntegrationsForEmployee,
-} from "@/services/db/repositories/employee-integration.repository";
-import { listKnowledgeDocumentsForEmployee } from "@/services/db/repositories/knowledge.repository";
+import { getEmployeeWorkspaceIntegrationsData } from "@/features/employees/service.server";
 
 export async function EmployeeWorkspaceIntegrations({
   employeeId,
 }: {
   employeeId: string;
 }) {
-  const session = await getCurrentSession();
-  const userId = session?.user?.id;
-  if (!userId) return null;
+  const data = await getEmployeeWorkspaceIntegrationsData(employeeId);
+  if (!data) return null;
 
-  const row = await getEmployeeRowById(employeeId, userId);
-  if (!row) return null;
-
-  const [integrations, documents] = await Promise.all([
-    listClientIntegrationsForEmployee(userId, employeeId),
-    listKnowledgeDocumentsForEmployee(userId, employeeId),
-  ]);
+  const { integrations, documents } = data;
 
   return (
     <section className="mt-8 border-t border-neutral-800 pt-8">

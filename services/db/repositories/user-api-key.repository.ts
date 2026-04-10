@@ -1,6 +1,6 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { userApiKey } from "@/db/schema";
 
 export type UserApiKeyRow = typeof userApiKey.$inferSelect;

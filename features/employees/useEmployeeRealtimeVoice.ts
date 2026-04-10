@@ -54,8 +54,14 @@ type Args = {
     patch: Partial<Pick<InteractionMessage, "content">>,
   ) => void;
   maybeAutonameFromUserText: (text: string) => void;
+  /** Fired when a Realtime voice turn finishes with assistant text (before transcript append). */
+  onAssistantVoiceSegment?: (payload: { text: string }) => void;
 };
 
+/**
+ * Employee push-to-talk / realtime mic: OpenAI Realtime (WebSocket) only.
+ * Settings → ElevenLabs controls avatar TTS voice design, not this hook.
+ */
 export function useEmployeeRealtimeVoice({
   employeeId,
   enabled,
@@ -64,6 +70,7 @@ export function useEmployeeRealtimeVoice({
   appendTranscriptMessage,
   patchTranscriptMessage,
   maybeAutonameFromUserText,
+  onAssistantVoiceSegment,
 }: Args) {
   const [voiceState, setVoiceState] = React.useState<VoiceUiState>("idle");
   const [voiceError, setVoiceError] = React.useState<string | null>(null);
@@ -73,6 +80,8 @@ export function useEmployeeRealtimeVoice({
   const voiceModeRef = React.useRef<"push" | "vad">("push");
   const micLiveRef = React.useRef(false);
   const [turnMode, setTurnMode] = React.useState<"push" | "vad">("push");
+  const onAssistantVoiceSegmentRef = React.useRef(onAssistantVoiceSegment);
+  onAssistantVoiceSegmentRef.current = onAssistantVoiceSegment;
   const userInputTranscriptBufRef = React.useRef("");
   const audioCtxRef = React.useRef<AudioContext | null>(null);
   const processorRef = React.useRef<ScriptProcessorNode | null>(null);
@@ -244,6 +253,7 @@ export function useEmployeeRealtimeVoice({
             const text = assistantTextBufRef.current.trim();
             assistantTextBufRef.current = "";
             if (text) {
+              onAssistantVoiceSegmentRef.current?.({ text });
               argsRef.current.appendTranscriptMessage({
                 id: argsRef.current.newId(),
                 role: "assistant",

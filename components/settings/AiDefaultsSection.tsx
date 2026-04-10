@@ -138,7 +138,7 @@ export function AiDefaultsSection() {
 
         <SettingRow
           label="Language"
-          description="Primary output language"
+          description="Primary output language. ElevenLabs avatar TTS uses this as language_code (ISO 639-1) when not Auto — see ElevenLabs text-to-speech API."
           control={
             <Select
               value={language}
@@ -149,7 +149,9 @@ export function AiDefaultsSection() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="border-neutral-800 bg-neutral-950 text-neutral-100">
+                <SelectItem value="auto">Auto-detect</SelectItem>
                 <SelectItem value="en">English</SelectItem>
+                <SelectItem value="ru">Russian</SelectItem>
                 <SelectItem value="es">Spanish</SelectItem>
                 <SelectItem value="de">German</SelectItem>
                 <SelectItem value="ja">Japanese</SelectItem>

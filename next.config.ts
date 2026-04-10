@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: "/api/arachine-x/:path*",
+        destination: "/api/arachne-x/:path*",
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

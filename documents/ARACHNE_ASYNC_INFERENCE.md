@@ -22,7 +22,7 @@ Async queuing only changes **how long ARACHNE-X waits** on the worker; it does *
 
 ## Recommended `session.error.code` values
 
-Emit these from ARACHNE-X when mapping worker/queue failures so the dashboard can show clearer copy (see `formatSessionErrorMessage` in `features/arachine-x/session/sessionStateMachine.ts`).
+Emit these from ARACHNE-X when mapping worker/queue failures so the dashboard can show clearer copy (see `formatSessionErrorMessage` in `features/arachne-x/session/sessionStateMachine.ts`).
 
 | `code` | Meaning |
 |--------|---------|

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 
 import { AppHeader } from "@/components/app/AppHeader";
 import { SETTINGS_NAV } from "@/components/settings/constants";
@@ -10,8 +11,23 @@ import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
 import type { SettingsSectionId } from "@/components/settings/types";
 import type { SettingsDTO } from "@/features/settings/types";
 
+function sectionFromQuery(raw: string | null): SettingsSectionId {
+  if (raw && SETTINGS_NAV.some((n) => n.id === raw)) {
+    return raw as SettingsSectionId;
+  }
+  return "account";
+}
+
 export function SettingsPage({ initialData }: { initialData: SettingsDTO }) {
-  const [section, setSection] = React.useState<SettingsSectionId>("account");
+  const searchParams = useSearchParams();
+  const sectionParam = searchParams.get("section");
+  const urlSection = sectionFromQuery(sectionParam);
+  const [section, setSection] =
+    React.useState<SettingsSectionId>(urlSection);
+
+  React.useEffect(() => {
+    setSection(sectionFromQuery(sectionParam));
+  }, [sectionParam]);
 
   const activeMeta = SETTINGS_NAV.find((n) => n.id === section);
 

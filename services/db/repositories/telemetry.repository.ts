@@ -4,7 +4,7 @@
 import { and, eq, sql } from "drizzle-orm";
 
 import { computeCostSavedCentsForTurn } from "@/lib/analytics/cost-saved.server";
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { aiSession, usageEvent } from "@/db/schema";
 
 export const USAGE_EVENT_CHAT_TURN = "openai.chat.turn";

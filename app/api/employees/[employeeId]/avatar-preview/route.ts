@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requestArachneAvatarPreview } from "@/features/arachine-x/server/arachneAvatarPreview.server";
+import { requestArachneAvatarPreview } from "@/features/arachne-x/server/arachneAvatarPreview.server";
 import { getCurrentSession } from "@/lib/auth/session.server";
 import {
   buildEmployeeAvatarPromptContext,

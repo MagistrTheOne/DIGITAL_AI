@@ -69,3 +69,35 @@ export function buildEmployeeAvatarPrompts(ctx: EmployeeAvatarPromptContext): {
     promptTemplateVersion: 2,
   };
 }
+
+/** Session T2V: base employee prompts plus assistant segment text (cinematic clip). */
+export function buildSessionSegmentT2vPrompts(
+  ctx: EmployeeAvatarPromptContext,
+  segmentText: string,
+): {
+  positivePrompt: string;
+  negativePrompt: string;
+  promptTemplateVersion: number;
+} {
+  const base = buildEmployeeAvatarPrompts(ctx);
+  const clip = segmentText.trim().slice(0, 2000);
+  return {
+    ...base,
+    positivePrompt: clip
+      ? `${base.positivePrompt} On-screen dialogue / motion aligned with: "${clip}".`
+      : base.positivePrompt,
+  };
+}
+
+/** Positive prompt for RunPod InfiniteTalk (identity + dialogue hint for motion). */
+export function buildInfiniteTalkPrompt(
+  ctx: EmployeeAvatarPromptContext,
+  segmentText: string,
+): string {
+  const identity = buildEmployeeAvatarPrompts(ctx).positivePrompt;
+  const t = segmentText.trim().slice(0, 600);
+  if (!t) {
+    return `${identity} Speaking naturally to camera, subtle expressions, professional office lighting.`;
+  }
+  return `${identity} Speaking with clear articulation; dialogue: ${t}`;
+}

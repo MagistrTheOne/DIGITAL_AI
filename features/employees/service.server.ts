@@ -6,6 +6,10 @@ import type {
   EmployeeSessionBootstrapDTO,
 } from "@/features/employees/types";
 
+import {
+  avatarPipelineHybridEnhanceDefaultFromEnv,
+  isAvatarRenderPipelineEnvEnabled,
+} from "@/lib/avatar/pipeline-env.server";
 import { getCurrentSession } from "@/lib/auth/session.server";
 import { getPlanForUser } from "@/services/db/repositories/billing.repository";
 import {
@@ -18,8 +22,12 @@ import {
   type EmployeeConfigJson,
   type EmployeeRecord,
 } from "@/services/db/repositories/employees.repository";
-import { mintArachneSessionForEmployee } from "@/features/arachine-x/server/arachneAvatarBootstrap.server";
+import { mintArachneSessionForEmployee } from "@/features/arachne-x/server/arachneAvatarBootstrap.server";
 import { enqueuePostDeployAvatarGeneration } from "@/lib/inference/avatar-generation-after-deploy.server";
+import {
+  listClientIntegrationsForEmployee,
+} from "@/services/db/repositories/employee-integration.repository";
+import { listKnowledgeDocumentsForEmployee } from "@/services/db/repositories/knowledge.repository";
 
 function toRoleCategory(role: string): EmployeeRoleCategory {
   switch (role) {
@@ -166,6 +174,11 @@ export async function getEmployeeSessionBootstrap(
     nullxesSessionId: options?.nullxesSessionId?.trim() || undefined,
   });
 
+  const pipelineFlags = {
+    avatarRenderPipelineEnabled: isAvatarRenderPipelineEnvEnabled(),
+    avatarRenderHybridDefault: avatarPipelineHybridEnhanceDefaultFromEnv(),
+  };
+
   if (!mint.ok) {
     return {
       sessionId,
@@ -174,6 +187,7 @@ export async function getEmployeeSessionBootstrap(
       capabilities: employee.capabilities,
       realtime: { ok: false, error: mint.error },
       arachneAvatar: null,
+      ...pipelineFlags,
     };
   }
 
@@ -199,6 +213,7 @@ export async function getEmployeeSessionBootstrap(
       avatarPreviewCached: mint.avatarPreviewCached,
       sessionSource: mint.source,
     },
+    ...pipelineFlags,
   };
 }
 
@@ -386,4 +401,21 @@ function isPostgresMissingRelationError(err: unknown): boolean {
   if (code === "42P01") return true;
   const msg = err instanceof Error ? err.message : String(err);
   return /relation .* does not exist/i.test(msg);
+}
+
+/** Workspace integrations + knowledge list for dashboard RSC (auth-scoped). */
+export async function getEmployeeWorkspaceIntegrationsData(employeeId: string) {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+
+  const row = await getEmployeeRowById(employeeId, userId);
+  if (!row) return null;
+
+  const [integrations, documents] = await Promise.all([
+    listClientIntegrationsForEmployee(userId, employeeId),
+    listKnowledgeDocumentsForEmployee(userId, employeeId),
+  ]);
+
+  return { integrations, documents };
 }

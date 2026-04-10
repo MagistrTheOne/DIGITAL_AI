@@ -6,8 +6,8 @@
 **Где лежит файл в `dai_saas`:** [`documents/ARACHNE-X-dashboard-integration-contract.md`](./ARACHNE-X-dashboard-integration-contract.md) (папка [`documents/`](./README.md) — документация dashboard). Зеркальная копия для организации NULLXES может жить в **`Documentation/D_SAAS/`** (репозиторий ARACHNE-X). Материалы **JobAI pilot** — в том же монорепо NULLXES отдельно, путь вида `Documentation/JOBAI PILOT/` (в дереве **`dai_saas` этих файлов нет**).
 
 **Назначение:** единая спека для стыковки **ARACHNE-X backend** (репозиторий ARACHNE-X) и **фронта D_SAAS** (`dai_saas`).  
-**Источник типов на фронте:** `features/arachine-x/event-system/eventTypes.ts` (имя пакета с опечаткой `arachine-x`; переименование — отдельная задача).  
-**Статус:** линия B реализована end-to-end: **ARACHNE-X** — `POST /v1/realtime/token`, `GET /v1/ws` (см. репо NULLXES, `Documentation/D_SAAS/`); **`dai_saas`** — mint, bootstrap, BFF `/api/arachine-x/token`, `WebSocketTransport`, UI на `EmployeeInteractionPage` (таблица ниже).
+**Источник типов на фронте:** `features/arachne-x/event-system/eventTypes.ts` (`ArachneX*` wire events / outbound actions).  
+**Статус:** линия B реализована end-to-end: **ARACHNE-X** — `POST /v1/realtime/token`, `GET /v1/ws` (см. репо NULLXES, `Documentation/D_SAAS/`); **`dai_saas`** — mint, bootstrap, BFF `/api/arachne-x/token`, `WebSocketTransport`, UI на `EmployeeInteractionPage` (таблица ниже).
 
 **Сопутствующие артефакты (репозиторий ARACHNE-X, не в `dai_saas`):** OpenAPI `GET /v1/openapi.json`, документ **NULLXES MVP Media Layer API** (`Documentation/JOBAI PILOT/NULLXES_MVP_Media_Layer_API_03-04-2026.md` — оркестрация слотов / webhook для **внешнего** platform-backend), `src/server/openapi_spec.py`.
 
@@ -17,14 +17,14 @@
 
 | Что | Где |
 |-----|-----|
-| Mint server→server | [`arachneRealtimeMint.server.ts`](../features/arachine-x/server/arachneRealtimeMint.server.ts) — `POST {ARACHNE_HTTP_BASE}/v1/realtime/token` (legacy); заголовок `X-NULLXES-Realtime-Service-Key` при заданном `NULLXES_REALTIME_SERVICE_KEY` |
-| Avatar bootstrap (рекомендуется) | [`arachneAvatarBootstrap.server.ts`](../features/arachine-x/server/arachneAvatarBootstrap.server.ts) — `POST {ARACHNE_HTTP_BASE}/v1/avatar/bootstrap` с тем же телом; при **404/405** автоматический fallback на `/v1/realtime/token`. `ARACHNE_SKIP_AVATAR_BOOTSTRAP=1` — только legacy mint. |
+| Mint server→server | [`arachneRealtimeMint.server.ts`](../features/arachne-x/server/arachneRealtimeMint.server.ts) — `POST {ARACHNE_HTTP_BASE}/v1/realtime/token` (legacy); заголовок `X-NULLXES-Realtime-Service-Key` при заданном `NULLXES_REALTIME_SERVICE_KEY` |
+| Avatar bootstrap (рекомендуется) | [`arachneAvatarBootstrap.server.ts`](../features/arachne-x/server/arachneAvatarBootstrap.server.ts) — `POST {ARACHNE_HTTP_BASE}/v1/avatar/bootstrap` с тем же телом; при **404/405** автоматический fallback на `/v1/realtime/token`. `ARACHNE_SKIP_AVATAR_BOOTSTRAP=1` — только legacy mint. |
 | Bootstrap страницы сотрудника | [`getEmployeeSessionBootstrap`](../features/employees/service.server.ts): новый UUID `sessionId`, опционально `nullxesSessionId` из query; в DTO клиенту — `websocket` + `arachneAvatar` (preview URL, `pipelineMode`, `audioTransport`, …) **без** секретов |
-| BFF токена (сессия пользователя) | [`app/api/arachine-x/token/route.ts`](../app/api/arachine-x/token/route.ts) — `runtime: nodejs`, `POST` с телом `sessionId` / `employeeId?` / `nullxesSessionId?`; `GET` только в non-production |
-| WebSocket клиент | [`features/arachine-x/transport/WebSocketTransport.ts`](../features/arachine-x/transport/WebSocketTransport.ts) — `?token=` если не в URL; JSON кадры; закрытие `4401` / `1008` → `session.error` |
+| BFF токена (сессия пользователя) | [`app/api/arachne-x/token/route.ts`](../app/api/arachne-x/token/route.ts) — `runtime: nodejs`, `POST` с телом `sessionId` / `employeeId?` / `nullxesSessionId?`; `GET` только в non-production |
+| WebSocket клиент | [`features/arachne-x/transport/WebSocketTransport.ts`](../features/arachne-x/transport/WebSocketTransport.ts) — `?token=` если не в URL; JSON кадры; закрытие `4401` / `1008` → `session.error` |
 | Чат в UI | [`EmployeeInteractionPage`](../components/employee-interaction/EmployeeInteractionPage.tsx) — `chat.send` / приём `chat.message.received`; **без** `POST /v1/chat` в MVP |
 
-Ответ mint на ARACHNE: `issuedAt` / `expiresAt` — строки ISO-8601 с `Z` (в типах [`AvatarTokenClaims`](../features/arachine-x/server/tokenClaims.server.ts)).
+Ответ mint на ARACHNE: `issuedAt` / `expiresAt` — строки ISO-8601 с `Z` (в типах [`AvatarTokenClaims`](../features/arachne-x/server/tokenClaims.server.ts)).
 
 ---
 
@@ -84,14 +84,14 @@ flowchart LR
 }
 ```
 
-**Формат дат:** ARACHNE отдаёт `issuedAt` / `expiresAt` как **строки ISO-8601 с `Z`**. Тип [`AvatarTokenClaims`](../features/arachine-x/server/tokenClaims.server.ts) и ответ BFF используют те же строки без нормализации в числа.
+**Формат дат:** ARACHNE отдаёт `issuedAt` / `expiresAt` как **строки ISO-8601 с `Z`**. Тип [`AvatarTokenClaims`](../features/arachne-x/server/tokenClaims.server.ts) и ответ BFF используют те же строки без нормализации в числа.
 
 **Рекомендации NULLXES для бэка (эволюция):**
 
 - **Вариант 1 — JWT:** подпись (например HS256/RS256), claims минимум: `sub` (user), `employeeId`, `sessionId` или `roomId`, `capabilities` (массив строк), `aud` (например `arachne-realtime`), `iat`, `exp`. Срок жизни **короткий** (5–15 мин) для WS; обновление — повторный `POST` token или refresh flow (описать отдельно).
 - **Вариант 2 — opaque token:** случайный id, сервер хранит сессию в Redis; в ответе тот же JSON, `token` не parseable на клиенте.
 
-**Эндпоинт:** может оставаться на Next (`POST /api/arachine-x/token`), который **проксирует** или **подписывает** ответ, либо напрямую `POST https://arachne.../v1/token` — главное, чтобы **поля** совпадали с ожиданием UI.
+**Эндпоинт:** может оставаться на Next (`POST /api/arachne-x/token`), который **проксирует** или **подписывает** ответ, либо напрямую `POST https://arachne.../v1/token` — главное, чтобы **поля** совпадали с ожиданием UI.
 
 ---
 
@@ -125,11 +125,11 @@ flowchart LR
 
 ---
 
-## 6. Таблица: провод ↔ `ArachineXEvent` / `ArachineXOutboundAction`
+## 6. Таблица: провод ↔ `ArachneXEvent` / `ArachneXOutboundAction`
 
 Имена полей на проводе **совпадают** с TypeScript-типами, если не оговорено иное.
 
-### 6.1 Сервер → клиент (`ArachineXEvent`)
+### 6.1 Сервер → клиент (`ArachneXEvent`)
 
 | `type` | Пример JSON |
 |--------|-------------|
@@ -143,7 +143,7 @@ flowchart LR
 
 `at` — Unix timestamp в миллисекундах (как `Date.now()` в JS).
 
-### 6.2 Клиент → сервер (`ArachineXOutboundAction`)
+### 6.2 Клиент → сервер (`ArachneXOutboundAction`)
 
 | `type` | Пример JSON |
 |--------|-------------|
@@ -214,7 +214,7 @@ flowchart LR
 ## 12. Вне текущего скоупа / следующие шаги
 
 - **Прод:** Redis (или аналог) для opaque-токенов на ARACHNE-X; реальный LLM/медиа-поток вместо stub-ответов в WS/REST.  
-- **`dai_saas`:** опционально **same-origin proxy** WebSocket через Next (`/api/.../ws` → upstream) для CORS/Origin; переименование пакета `arachine-x` → `arachne-x`. Транспорт уже поддерживает `?token=` и абсолютный `websocketUrl` от mint; первый кадр `auth` поддержан на стороне ARACHNE-X.
+- **`dai_saas`:** опционально **same-origin proxy** WebSocket через Next (`/api/.../ws` → upstream) для CORS/Origin; модуль фронта **`features/arachne-x`**, BFF **`/api/arachne-x/token`**; legacy **`/api/arachine-x/*`** переписывается на **`/api/arachne-x/*`** в `next.config.ts`. Транспорт уже поддерживает `?token=` и абсолютный `websocketUrl` от mint; первый кадр `auth` поддержан на стороне ARACHNE-X.
 
 ---
 

@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import type { EmployeeSessionBootstrapDTO } from "@/features/employees/types";
-import { useAvatarRuntime } from "@/features/arachine-x/client/useAvatarRuntime";
+import { useAvatarRuntime } from "@/features/arachne-x/client/useAvatarRuntime";
 
 function AvatarStagePlaceholder({
   bootstrap,

@@ -88,5 +88,9 @@ export type EmployeeSessionBootstrapDTO = {
   realtime: EmployeeRealtimeBootstrap;
   /** Set when realtime.ok; ARACHNE avatar bootstrap metadata for UI / video src. */
   arachneAvatar: EmployeeArachneAvatarBootstrapDTO | null;
+  /** RunPod session avatar pipeline (Ditto / ARACHNE T2V); optional feature flag from env. */
+  avatarRenderPipelineEnabled?: boolean;
+  /** Default hybrid realtime→enhanced when pipeline is enabled (env `AVATAR_PIPELINE_HYBRID_ENHANCE_DEFAULT=1`). */
+  avatarRenderHybridDefault?: boolean;
 };
 

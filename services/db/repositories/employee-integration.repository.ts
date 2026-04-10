@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, desc, eq } from "drizzle-orm";
 
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { employeeIntegration } from "@/db/schema";
 import type { ClientApiIntegrationConfig } from "@/lib/integrations/client-api-config.types";
 

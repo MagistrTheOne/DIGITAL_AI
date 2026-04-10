@@ -16,14 +16,15 @@ import { VoiceControlButton } from "@/components/employee-interaction/VoiceContr
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Trash2 } from "lucide-react";
-import type { ArachineXEvent } from "@/features/arachine-x/event-system/eventTypes";
-import { useAvatarRuntime } from "@/features/arachine-x/client/useAvatarRuntime";
+import type { ArachneXEvent } from "@/features/arachne-x/event-system/eventTypes";
+import { useAvatarRuntime } from "@/features/arachne-x/client/useAvatarRuntime";
 import { EmployeeOpenAiSessionsSidebar } from "@/components/employee-interaction/EmployeeOpenAiSessionsSidebar";
 import { postArachneChatTurnTelemetry } from "@/features/employees/arachneTelemetry.client";
 import { postEndAiWorkspaceSession } from "@/features/employees/analyticsSession.client";
 import { postEmployeeOpenAiChat } from "@/features/employees/openaiChat.client";
 import { useEmployeeOpenAiSessions } from "@/features/employees/useEmployeeOpenAiSessions";
 import { useEmployeeRealtimeVoice } from "@/features/employees/useEmployeeRealtimeVoice";
+import { useAvatarRenderPipeline } from "@/features/employees/useAvatarRenderPipeline";
 import type { EmployeeSessionBootstrapDTO } from "@/features/employees/types";
 
 function newId() {
@@ -68,6 +69,14 @@ export function EmployeeInteractionPage({
     Boolean(bootstrap.employee.videoPreview?.src);
 
   const avatarBootstrap = React.useMemo(() => toAvatarBootstrap(bootstrap), [bootstrap]);
+
+  const avatarPipelineEnabled = Boolean(bootstrap.avatarRenderPipelineEnabled);
+  const { notifyAssistantSegment, segmentOverlay } = useAvatarRenderPipeline({
+    enabled: avatarPipelineEnabled,
+    sessionId: bootstrap.sessionId,
+    employeeId,
+    hybridEnhance: Boolean(bootstrap.avatarRenderHybridDefault),
+  });
 
   const {
     connect,
@@ -206,6 +215,11 @@ export function EmployeeInteractionPage({
     appendTranscriptMessage,
     patchTranscriptMessage,
     maybeAutonameFromUserText,
+    onAssistantVoiceSegment: avatarPipelineEnabled
+      ? ({ text }) => {
+          notifyAssistantSegment(text);
+        }
+      : undefined,
   });
 
   const processingTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
@@ -231,7 +245,7 @@ export function EmployeeInteractionPage({
   React.useEffect(() => {
     if (!bootstrap.realtime.ok) return;
     const clientSessionId = `nx_ws_${bootstrap.sessionId}`;
-    return subscribeEvents((ev: ArachineXEvent) => {
+    return subscribeEvents((ev: ArachneXEvent) => {
       if (openAiChatEnabled) return;
 
       if (ev.type === "session.error") {
@@ -264,22 +278,29 @@ export function EmployeeInteractionPage({
             tokensDelta: 0,
           });
         }
-        return [
+        const next: InteractionMessage[] = [
           ...prev,
           {
             id: ev.message.id,
-            role: "assistant",
+            role: "assistant" as const,
             content: ev.message.text,
             createdAt: ev.at,
             status: "complete" as const,
           },
         ];
+        if (avatarPipelineEnabled && ev.message.text?.trim()) {
+          const piece = ev.message.text;
+          queueMicrotask(() => notifyAssistantSegment(piece));
+        }
+        return next;
       });
     });
   }, [
+    avatarPipelineEnabled,
     bootstrap.realtime.ok,
     bootstrap.sessionId,
     employeeId,
+    notifyAssistantSegment,
     openAiChatEnabled,
     subscribeEvents,
   ]);
@@ -329,6 +350,9 @@ export function EmployeeInteractionPage({
           messages: transcript,
           clientChatSessionId: openAiActiveSessionId ?? undefined,
         });
+        if (avatarPipelineEnabled && content.trim()) {
+          notifyAssistantSegment(content);
+        }
         setTranscriptMessages((prev) => [
           ...prev,
           {
@@ -376,6 +400,8 @@ export function EmployeeInteractionPage({
     sendChat,
     setTranscriptMessages,
     transcriptBusy,
+    avatarPipelineEnabled,
+    notifyAssistantSegment,
   ]);
 
   const stubOnVoicePress = React.useCallback(() => {
@@ -454,6 +480,7 @@ export function EmployeeInteractionPage({
             subscribeArachne={
               bootstrap.realtime.ok ? subscribeEvents : undefined
             }
+            segmentOverlay={avatarPipelineEnabled ? segmentOverlay : null}
           />
           <AvatarPreviewSection
             employeeId={employeeId}

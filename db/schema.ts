@@ -261,6 +261,51 @@ export const employee = pgTable(
 );
 
 /**
+ * Multi-engine avatar render jobs (Ditto talking-head, ARACHNE-X T2V enhanced).
+ * Idempotency: unique (user_id, session_id, sequence, video_tier).
+ */
+export const avatarRenderJob = pgTable(
+  "avatar_render_job",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    employeeId: text("employee_id")
+      .notNull()
+      .references(() => employee.id, { onDelete: "cascade" }),
+    sessionId: text("session_id").notNull(),
+    sequence: integer("sequence").notNull(),
+    engineRequested: text("engine_requested").notNull(),
+    engineUsed: text("engine_used"),
+    videoTier: text("video_tier").notNull(),
+    parentJobId: text("parent_job_id"),
+    status: text("status").notNull().default("queued"),
+    progress: integer("progress").notNull().default(0),
+    videoUrl: text("video_url"),
+    error: text("error"),
+    runpodJobId: text("runpod_job_id"),
+    runpodEndpointKey: text("runpod_endpoint_key"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("avatar_render_job_session_seq_tier_uq").on(
+      table.userId,
+      table.sessionId,
+      table.sequence,
+      table.videoTier,
+    ),
+    index("avatar_render_job_user_status_idx").on(table.userId, table.status),
+    index("avatar_render_job_employee_idx").on(table.employeeId),
+  ],
+);
+
+/**
  * Per-employee integrations (e.g. client HTTP API with stored secret).
  * `config` holds non-secret JSON; `secret_ciphertext` is app-encrypted.
  */

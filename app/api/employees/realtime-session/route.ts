@@ -8,6 +8,7 @@ import {
   type EmployeeConfigJson,
 } from "@/services/db/repositories/employees.repository";
 
+/** Mints OpenAI Realtime client credentials for employee voice chat (not ElevenLabs). */
 export async function POST(req: Request) {
   const session = await getCurrentSession();
   const userId = session?.user?.id;

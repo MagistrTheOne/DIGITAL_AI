@@ -12,7 +12,7 @@ import { getSettingsForUser } from "@/services/db/repositories/settings.reposito
 import { getUsageForUser } from "@/services/db/repositories/usage.repository";
 import { listActiveApiKeysForUser } from "@/services/db/repositories/user-api-key.repository";
 import { getSecuritySessionsDto } from "@/lib/auth/sessions.server";
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { user } from "@/db/schema";
 
 function mapRowToDtoParts(row: NonNullable<Awaited<ReturnType<typeof getSettingsForUser>>>) {

@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { dash } from "@better-auth/infra";
 
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import * as schema from "@/db/schema";
 import { sendTransactionalEmail } from "@/lib/email/send-transactional.server";
 

@@ -10,7 +10,7 @@ function activeSessionSince(): Date {
   return new Date(Date.now() - ACTIVE_SESSION_TTL_MS);
 }
 
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { aiSession, usageEvent } from "@/db/schema";
 import { listEmployeesByQuery } from "@/services/db/repositories/employees.repository";
 import {

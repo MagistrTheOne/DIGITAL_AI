@@ -4,7 +4,7 @@
  */
 import { and, count, eq, gte, inArray, sum } from "drizzle-orm";
 
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { aiSession, usageEvent } from "@/db/schema";
 import { CHAT_TURN_SUCCESS_EVENT_TYPES } from "@/services/db/repositories/telemetry.repository";
 

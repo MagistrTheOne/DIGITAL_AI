@@ -58,7 +58,7 @@ Expected JSON shape from the status endpoint (examples):
 ## Related files
 
 - Client POST: `app/api/employees/[employeeId]/avatar-preview/route.ts`
-- Outbound fetch: `features/arachine-x/server/arachneAvatarPreview.server.ts`
+- Outbound fetch: `features/arachne-x/server/arachneAvatarPreview.server.ts`
 - Deploy enqueue: `lib/inference/avatar-generation-after-deploy.server.ts`
 - Prompts: `lib/inference/build-employee-avatar-prompt.server.ts`
 - Job route: `app/api/jobs/[jobId]/route.ts`

@@ -4,7 +4,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { Subscription as PolarSubscription } from "@polar-sh/sdk/models/components/subscription";
 
-import { db } from "@/db";
+import { db } from "@/services/db/client";
 import { subscription } from "@/db/schema";
 import type { PlanType } from "@/features/account/types";
 import {
