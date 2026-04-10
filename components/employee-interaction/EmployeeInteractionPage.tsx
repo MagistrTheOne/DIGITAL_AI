@@ -50,6 +50,7 @@ export function EmployeeInteractionPage({
   openAiChatEnabled,
   realtimeVoiceEnabled,
   avatarPreviewGenerateEnabled = false,
+  identityClipEnabled = false,
 }: {
   bootstrap: EmployeeSessionBootstrapDTO;
   displayName: string;
@@ -61,9 +62,13 @@ export function EmployeeInteractionPage({
   realtimeVoiceEnabled?: boolean;
   /** Server: ARACHNE_AVATAR_PREVIEW_URL set — show “Generate preview” (LongCat / worker on ARACHNE). */
   avatarPreviewGenerateEnabled?: boolean;
+  /** Server: RunPod + ElevenLabs + Blob — InfiniteTalk one-shot identity when https reference image exists. */
+  identityClipEnabled?: boolean;
 }) {
+  const identityClipImageUrl = bootstrap.employee.identityClipImageUrl ?? null;
   const avatarPreviewVisible =
     avatarPreviewGenerateEnabled ||
+    (identityClipEnabled && Boolean(identityClipImageUrl?.trim())) ||
     bootstrap.employee.avatarPreview?.renderStatus === "generating" ||
     bootstrap.employee.avatarPreview?.renderStatus === "failed" ||
     Boolean(bootstrap.employee.videoPreview?.src);
@@ -486,6 +491,8 @@ export function EmployeeInteractionPage({
             employeeId={employeeId}
             visible={avatarPreviewVisible}
             generateEnabled={avatarPreviewGenerateEnabled}
+            identityClipEnabled={identityClipEnabled}
+            identityClipImageUrl={identityClipImageUrl}
             initialRenderStatus={
               bootstrap.employee.avatarPreview?.renderStatus ?? "idle"
             }

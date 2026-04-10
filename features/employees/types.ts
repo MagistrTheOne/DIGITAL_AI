@@ -35,6 +35,11 @@ export type EmployeeDTO = {
   capabilities: EmployeeCapability[];
   videoPreview?: EmployeeVideoPreview;
   avatarPreview?: EmployeeAvatarPreviewState;
+  /**
+   * Public https URL suitable as InfiniteTalk `image` input (identity ref or https avatar placeholder).
+   * Used for one-shot identity clip when infra is configured.
+   */
+  identityClipImageUrl?: string | null;
 };
 
 export type EmployeeListQuery = {

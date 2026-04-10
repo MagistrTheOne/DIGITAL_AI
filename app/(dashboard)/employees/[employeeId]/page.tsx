@@ -6,6 +6,7 @@ import {
   getEmployeeForDashboard,
   getEmployeeSessionBootstrap,
 } from "@/features/employees/service.server";
+import { isIdentityClipInfrastructureConfigured } from "@/lib/avatar/identity-clip-env.server";
 import { isNullxesRealtimeVoiceEnvEnabled } from "@/lib/env/nullxes-realtime-voice.server";
 import { getCurrentSession } from "@/lib/auth/session.server";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,7 @@ export default async function EmployeeDetailPage({
   const avatarPreviewGenerateEnabled = Boolean(
     process.env.ARACHNE_AVATAR_PREVIEW_URL?.trim(),
   );
+  const identityClipEnabled = isIdentityClipInfrastructureConfigured();
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-y-auto overflow-x-hidden p-6">
@@ -102,6 +104,7 @@ export default async function EmployeeDetailPage({
         openAiChatEnabled={openAiChatEnabled}
         realtimeVoiceEnabled={realtimeVoiceEnabled}
         avatarPreviewGenerateEnabled={avatarPreviewGenerateEnabled}
+        identityClipEnabled={identityClipEnabled}
       />
       <EmployeeWorkspaceIntegrations employeeId={employeeId} />
     </div>

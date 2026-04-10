@@ -14,6 +14,9 @@ export function AvatarPreviewSection({
   employeeId,
   visible,
   generateEnabled,
+  identityClipEnabled = false,
+  identityClipImageUrl = null,
+  identityClipIntroText,
   initialRenderStatus,
   initialVideoUrl,
   initialJobId,
@@ -25,8 +28,12 @@ export function AvatarPreviewSection({
   employeeId: string;
   /** When false, entire block hidden (no ARACHNE and no in-flight preview). */
   visible: boolean;
-  /** POST /avatar-preview requires ARACHNE_AVATAR_PREVIEW_URL. */
+  /** Legacy preview: POST /avatar-preview requires ARACHNE_AVATAR_PREVIEW_URL. */
   generateEnabled: boolean;
+  /** RunPod InfiniteTalk one-shot identity (requires https reference image). */
+  identityClipEnabled?: boolean;
+  identityClipImageUrl?: string | null;
+  identityClipIntroText?: string;
   initialRenderStatus: RenderStatus;
   initialVideoUrl: string | null;
   initialJobId: string | null;
@@ -50,7 +57,14 @@ export function AvatarPreviewSection({
     initialJobId,
     initialError,
     onRefresh,
+    identityClipEnabled,
+    identityClipImageUrl,
+    identityClipIntroText,
   });
+
+  const canGenerate =
+    generateEnabled ||
+    (identityClipEnabled && Boolean(identityClipImageUrl?.trim()));
 
   const [hiddenForSession, setHiddenForSession] = React.useState(false);
 
@@ -95,7 +109,7 @@ export function AvatarPreviewSection({
         {preview.label}
       </p>
 
-      {generateEnabled ? (
+      {canGenerate ? (
         <Button
           type="button"
           variant="secondary"

@@ -4,6 +4,7 @@ import * as React from "react";
 
 import type { RenderStatus } from "@/features/employees/avatar-preview.types";
 import {
+  createAvatarIdentityClip,
   generateAvatarPreview,
   isPreviewJobResponse,
   isPreviewVideoResponse,
@@ -31,6 +32,10 @@ export function useAvatarPreviewGeneration(options: {
   initialJobId: string | null;
   initialError: string | null;
   onRefresh: () => void;
+  /** When true and `identityClipImageUrl` is set, Generate uses InfiniteTalk one-shot (not ARACHNE preview). */
+  identityClipEnabled?: boolean;
+  identityClipImageUrl?: string | null;
+  identityClipIntroText?: string;
 }) {
   const {
     employeeId,
@@ -39,6 +44,9 @@ export function useAvatarPreviewGeneration(options: {
     initialJobId,
     initialError,
     onRefresh,
+    identityClipEnabled = false,
+    identityClipImageUrl = null,
+    identityClipIntroText,
   } = options;
 
   const [renderStatus, setRenderStatus] = React.useState<RenderStatus>(
@@ -111,6 +119,29 @@ export function useAvatarPreviewGeneration(options: {
     setError(null);
     setRenderStatus("generating");
 
+    if (identityClipEnabled && identityClipImageUrl?.trim()) {
+      const clip = await createAvatarIdentityClip(employeeId, {
+        imageUrl: identityClipImageUrl.trim(),
+        ...(identityClipIntroText?.trim()
+          ? { text: identityClipIntroText.trim() }
+          : {}),
+      });
+      if (!clip.ok) {
+        setRenderStatus("failed");
+        setError(clip.error);
+        setBusy(false);
+        onRefreshRef.current();
+        return;
+      }
+      setVideoUrl(clip.body.videoUrl);
+      setRenderStatus("ready");
+      setJobId(null);
+      setError(null);
+      setBusy(false);
+      onRefreshRef.current();
+      return;
+    }
+
     const res = await generateAvatarPreview(employeeId);
     if (!res.ok) {
       setRenderStatus("failed");
@@ -140,7 +171,13 @@ export function useAvatarPreviewGeneration(options: {
     setError("Unexpected preview response");
     setBusy(false);
     onRefreshRef.current();
-  }, [employeeId, runPoll]);
+  }, [
+    employeeId,
+    identityClipEnabled,
+    identityClipImageUrl,
+    identityClipIntroText,
+    runPoll,
+  ]);
 
   const retry = React.useCallback(() => {
     setError(null);

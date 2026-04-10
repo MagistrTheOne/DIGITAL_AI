@@ -24,13 +24,31 @@ export type EmployeeRecord = {
   avatar_render_status: RenderStatus;
   avatar_preview_job_id: string | null;
   avatar_preview_error: string | null;
+  /** Optional https reference image for InfiniteTalk identity / sessions. */
+  identity_reference_image_url: string | null;
+  /** Wizard / config free-text; may include https URL for reference. */
+  avatar_placeholder: string | null;
 };
 
 export type EmployeeConfigJson = {
   prompt?: string;
   capabilities?: string[];
   avatarPlaceholder?: string | null;
+  /** One-shot / loop preview clip (mp4), durable URL (e.g. Blob). Session segments reuse this + TTS audio. */
   videoPreviewUrl?: string | null;
+  /**
+   * Still image (https) for InfiniteTalk / lip-sync reference — required for reliable Hub API
+   * (do not pass mp4 here). Set by “Create identity clip” after user uploads or confirms photo.
+   */
+  identityReferenceImageUrl?: string | null;
+  /** Prompt template revision used when identity clip was generated; bump to force re-shoot. */
+  identityClipPromptTemplateVersion?: number;
+  /** Hash of (reference image + intro text + engine + size) for idempotent regen / cache. */
+  identityClipInputHash?: string | null;
+  /** ISO timestamp when identity clip was written to `videoPreviewUrl`. */
+  identityClipGeneratedAt?: string | null;
+  /** Which path produced the stored identity clip. */
+  identityClipEngine?: "infinitetalk" | "runpod_preview" | "arachne_http";
   roleCustomTitle?: string | null;
   avatarRenderStatus?: RenderStatus | null;
   avatarPreviewJobId?: string | null;
@@ -63,6 +81,13 @@ function mapRow(r: typeof employee.$inferSelect): EmployeeRecord {
       ? cfg.roleCustomTitle.trim()
       : r.role;
 
+  const identityRef =
+    typeof cfg.identityReferenceImageUrl === "string"
+      ? cfg.identityReferenceImageUrl.trim()
+      : "";
+  const placeholder =
+    typeof cfg.avatarPlaceholder === "string" ? cfg.avatarPlaceholder.trim() : "";
+
   return {
     id: r.id,
     name: r.name,
@@ -76,6 +101,8 @@ function mapRow(r: typeof employee.$inferSelect): EmployeeRecord {
       typeof cfg.avatarPreviewJobId === "string" ? cfg.avatarPreviewJobId : null,
     avatar_preview_error:
       typeof cfg.avatarPreviewError === "string" ? cfg.avatarPreviewError : null,
+    identity_reference_image_url: identityRef || null,
+    avatar_placeholder: placeholder || null,
   };
 }
 

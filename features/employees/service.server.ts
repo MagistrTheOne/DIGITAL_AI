@@ -22,6 +22,7 @@ import {
   type EmployeeConfigJson,
   type EmployeeRecord,
 } from "@/services/db/repositories/employees.repository";
+import { resolveIdentityClipImageUrlFromRecord } from "@/lib/avatar/identity-clip.server";
 import { mintArachneSessionForEmployee } from "@/features/arachne-x/server/arachneAvatarBootstrap.server";
 import { enqueuePostDeployAvatarGeneration } from "@/lib/inference/avatar-generation-after-deploy.server";
 import {
@@ -44,6 +45,7 @@ function toRoleCategory(role: string): EmployeeRoleCategory {
 }
 
 function recordToEmployeeDTO(r: EmployeeRecord): EmployeeDTO {
+  const identityClipImageUrl = resolveIdentityClipImageUrlFromRecord(r);
   return {
     id: r.id,
     name: r.name,
@@ -59,6 +61,7 @@ function recordToEmployeeDTO(r: EmployeeRecord): EmployeeDTO {
       jobId: r.avatar_preview_job_id,
       error: r.avatar_preview_error,
     },
+    identityClipImageUrl: identityClipImageUrl ?? undefined,
   };
 }
 

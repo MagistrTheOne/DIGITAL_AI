@@ -80,12 +80,17 @@ function pickRealtimeBackend(requested?: AvatarEngine): "infinitetalk" | "talkin
 }
 
 function resolveReferenceImageUrl(cfg: EmployeeConfigJson): string | null {
-  const video =
-    typeof cfg.videoPreviewUrl === "string" ? cfg.videoPreviewUrl.trim() : "";
-  if (/^https?:\/\//i.test(video)) return video;
+  const identity =
+    typeof cfg.identityReferenceImageUrl === "string"
+      ? cfg.identityReferenceImageUrl.trim()
+      : "";
+  if (/^https?:\/\//i.test(identity)) return identity;
   const ph =
     typeof cfg.avatarPlaceholder === "string" ? cfg.avatarPlaceholder.trim() : "";
   if (/^https?:\/\//i.test(ph)) return ph;
+  const video =
+    typeof cfg.videoPreviewUrl === "string" ? cfg.videoPreviewUrl.trim() : "";
+  if (/^https?:\/\//i.test(video)) return video;
   return null;
 }
 

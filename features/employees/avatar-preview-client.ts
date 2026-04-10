@@ -11,6 +11,54 @@ export type GenerateAvatarPreviewResult =
   | { ok: true; status: number; body: PreviewResponse }
   | { ok: false; status: number; error: string };
 
+export type IdentityClipResponse = {
+  videoUrl: string;
+  cached: boolean;
+};
+
+export async function createAvatarIdentityClip(
+  employeeId: string,
+  body: { imageUrl: string; text?: string },
+): Promise<
+  | { ok: true; status: number; body: IdentityClipResponse }
+  | { ok: false; status: number; error: string }
+> {
+  const res = await fetch("/api/avatar/identity-clip", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      employeeId,
+      imageUrl: body.imageUrl,
+      ...(body.text !== undefined ? { text: body.text } : {}),
+    }),
+  });
+
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+
+  if (!res.ok) {
+    const err =
+      (typeof data.error === "string" && data.error) ||
+      `Request failed (${res.status})`;
+    return { ok: false, status: res.status, error: err };
+  }
+
+  const videoUrl = typeof data.videoUrl === "string" ? data.videoUrl : "";
+  const cached = data.cached === true;
+  if (!videoUrl) {
+    return {
+      ok: false,
+      status: res.status,
+      error: "Invalid identity clip response (missing videoUrl)",
+    };
+  }
+
+  return {
+    ok: true,
+    status: res.status,
+    body: { videoUrl, cached },
+  };
+}
+
 export async function generateAvatarPreview(
   employeeId: string,
   body?: { referenceImage?: string },
