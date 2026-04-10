@@ -9,6 +9,7 @@ import type {
   InteractionMessage,
   VoiceUiState,
 } from "@/components/employee-interaction/types";
+import type { AvatarVoiceMode } from "@/features/employees/avatar-voice.types";
 
 function int16PcmToBase64(samples: Int16Array): string {
   const u8 = new Uint8Array(samples.buffer, samples.byteOffset, samples.byteLength);
@@ -56,6 +57,10 @@ type Args = {
   maybeAutonameFromUserText: (text: string) => void;
   /** Fired when a Realtime voice turn finishes with assistant text (before transcript append). */
   onAssistantVoiceSegment?: (payload: { text: string }) => void;
+  /** Server mint + hook: `sync` = text-only model output + ElevenLabs/InfiniteTalk (see bootstrap). */
+  avatarVoiceMode?: AvatarVoiceMode;
+  /** After model text is ready: TTS + RunPod; transcript appends after success. */
+  onAssistantSyncTurn?: (text: string) => Promise<void>;
 };
 
 /**
@@ -71,6 +76,8 @@ export function useEmployeeRealtimeVoice({
   patchTranscriptMessage,
   maybeAutonameFromUserText,
   onAssistantVoiceSegment,
+  avatarVoiceMode = "realtime",
+  onAssistantSyncTurn,
 }: Args) {
   const [voiceState, setVoiceState] = React.useState<VoiceUiState>("idle");
   const [voiceError, setVoiceError] = React.useState<string | null>(null);
@@ -82,6 +89,10 @@ export function useEmployeeRealtimeVoice({
   const [turnMode, setTurnMode] = React.useState<"push" | "vad">("push");
   const onAssistantVoiceSegmentRef = React.useRef(onAssistantVoiceSegment);
   onAssistantVoiceSegmentRef.current = onAssistantVoiceSegment;
+  const avatarVoiceModeRef = React.useRef(avatarVoiceMode);
+  avatarVoiceModeRef.current = avatarVoiceMode;
+  const onAssistantSyncTurnRef = React.useRef(onAssistantSyncTurn);
+  onAssistantSyncTurnRef.current = onAssistantSyncTurn;
   const userInputTranscriptBufRef = React.useRef("");
   const audioCtxRef = React.useRef<AudioContext | null>(null);
   const processorRef = React.useRef<ScriptProcessorNode | null>(null);
@@ -183,6 +194,7 @@ export function useEmployeeRealtimeVoice({
       rt.on("event", (ev: RealtimeServerEvent) => {
         switch (ev.type) {
           case "response.output_audio.delta": {
+            if (avatarVoiceModeRef.current === "sync") break;
             try {
               const pcm = decodePcm16Base64(ev.delta);
               schedulePcmPlayback(pcm);
@@ -197,6 +209,16 @@ export function useEmployeeRealtimeVoice({
           }
           case "response.output_audio_transcript.done": {
             assistantTextBufRef.current = ev.transcript || assistantTextBufRef.current;
+            break;
+          }
+          case "response.output_text.delta": {
+            const delta = (ev as { delta?: string }).delta;
+            if (typeof delta === "string") assistantTextBufRef.current += delta;
+            break;
+          }
+          case "response.output_text.done": {
+            const t = (ev as { text?: string }).text;
+            if (typeof t === "string") assistantTextBufRef.current = t;
             break;
           }
           case "conversation.item.input_audio_transcription.delta": {
@@ -252,22 +274,60 @@ export function useEmployeeRealtimeVoice({
             waitingResponseRef.current = false;
             const text = assistantTextBufRef.current.trim();
             assistantTextBufRef.current = "";
+            const finishVoiceState = () => {
+              if (voiceModeRef.current === "vad" && micLiveRef.current) {
+                setVoiceState("recording");
+              } else {
+                setVoiceState("idle");
+              }
+            };
+
             if (text) {
-              onAssistantVoiceSegmentRef.current?.({ text });
-              argsRef.current.appendTranscriptMessage({
-                id: argsRef.current.newId(),
-                role: "assistant",
-                content: text,
-                createdAt: Date.now(),
-                status: "complete",
-              });
+              const sync =
+                avatarVoiceModeRef.current === "sync" &&
+                onAssistantSyncTurnRef.current;
+              if (sync) {
+                void (async () => {
+                  try {
+                    await onAssistantSyncTurnRef.current?.(text);
+                    argsRef.current.appendTranscriptMessage({
+                      id: argsRef.current.newId(),
+                      role: "assistant",
+                      content: text,
+                      createdAt: Date.now(),
+                      status: "complete",
+                    });
+                  } catch (e) {
+                    const msg =
+                      e instanceof Error ? e.message : "Sync playback failed";
+                    setVoiceError(msg);
+                    argsRef.current.appendTranscriptMessage({
+                      id: argsRef.current.newId(),
+                      role: "assistant",
+                      content: `${text}\n\n(Lip-sync: ${msg})`,
+                      createdAt: Date.now(),
+                      status: "complete",
+                    });
+                  } finally {
+                    finishVoiceState();
+                  }
+                })();
+              } else {
+                onAssistantVoiceSegmentRef.current?.({ text });
+                argsRef.current.appendTranscriptMessage({
+                  id: argsRef.current.newId(),
+                  role: "assistant",
+                  content: text,
+                  createdAt: Date.now(),
+                  status: "complete",
+                });
+                finishVoiceState();
+              }
             } else if (ev.response.status && ev.response.status !== "completed") {
               setVoiceError("Voice reply did not complete. Try again.");
-            }
-            if (voiceModeRef.current === "vad" && micLiveRef.current) {
-              setVoiceState("recording");
+              finishVoiceState();
             } else {
-              setVoiceState("idle");
+              finishVoiceState();
             }
             break;
           }
@@ -421,9 +481,13 @@ export function useEmployeeRealtimeVoice({
       waitingResponseRef.current = true;
       setVoiceState("processing");
       rt.send({ type: "input_audio_buffer.commit" });
+      const modalities =
+        avatarVoiceModeRef.current === "sync"
+          ? (["text"] as const)
+          : (["audio"] as const);
       rt.send({
         type: "response.create",
-        response: { output_modalities: ["audio"] },
+        response: { output_modalities: [...modalities] },
       });
     };
 
@@ -462,15 +526,21 @@ export function useEmployeeRealtimeVoice({
         ? {
             idle: "Tap — mic on (you choose when to stop)",
             recording: "Tap again when finished — then we send",
-            processing: "Waiting for reply…",
+            processing:
+              avatarVoiceMode === "sync"
+                ? "Lip-sync: synthesizing voice & video…"
+                : "Waiting for reply…",
           }
         : {
             idle: "Start hands-free (one tap for mic permission)",
             recording:
               "Speak anytime — pause to get a reply — tap square to end session",
-            processing: "Assistant replying… speak to interrupt",
+            processing:
+              avatarVoiceMode === "sync"
+                ? "Lip-sync: synthesizing…"
+                : "Assistant replying… speak to interrupt",
           },
-    [turnMode],
+    [turnMode, avatarVoiceMode],
   );
 
   if (!enabled) {

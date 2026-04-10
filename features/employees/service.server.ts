@@ -6,6 +6,7 @@ import type {
   EmployeeSessionBootstrapDTO,
 } from "@/features/employees/types";
 
+import { getAvatarVoiceModeFromEnv } from "@/lib/avatar/avatar-voice-mode.server";
 import {
   avatarPipelineHybridEnhanceDefaultFromEnv,
   isAvatarRenderPipelineEnvEnabled,
@@ -180,6 +181,7 @@ export async function getEmployeeSessionBootstrap(
   const pipelineFlags = {
     avatarRenderPipelineEnabled: isAvatarRenderPipelineEnvEnabled(),
     avatarRenderHybridDefault: avatarPipelineHybridEnhanceDefaultFromEnv(),
+    avatarVoiceMode: getAvatarVoiceModeFromEnv(),
   };
 
   if (!mint.ok) {

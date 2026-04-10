@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getAvatarVoiceModeFromEnv } from "@/lib/avatar/avatar-voice-mode.server";
 import { isNullxesRealtimeVoiceEnvEnabled } from "@/lib/env/nullxes-realtime-voice.server";
 import { mintEmployeeRealtimeClientSecret } from "@/lib/openai/employee-realtime-voice.server";
 import { getCurrentSession } from "@/lib/auth/session.server";
@@ -40,11 +41,14 @@ export async function POST(req: Request) {
   const cfg = (row.config ?? {}) as EmployeeConfigJson;
 
   try {
+    const avatarVoiceMode = getAvatarVoiceModeFromEnv();
     const { clientSecret, expiresAt, model, voiceMode } =
       await mintEmployeeRealtimeClientSecret({
         displayName: row.name,
         role: row.role,
         config: cfg,
+        assistantOutput:
+          avatarVoiceMode === "sync" ? "text" : "audio",
       });
     return NextResponse.json({
       model,

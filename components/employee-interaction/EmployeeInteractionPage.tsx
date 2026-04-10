@@ -25,6 +25,10 @@ import { postEmployeeOpenAiChat } from "@/features/employees/openaiChat.client";
 import { useEmployeeOpenAiSessions } from "@/features/employees/useEmployeeOpenAiSessions";
 import { useEmployeeRealtimeVoice } from "@/features/employees/useEmployeeRealtimeVoice";
 import { deriveAvatarPresentationState } from "@/features/employees/avatar-digital-human.types";
+import {
+  postAvatarSyncClip,
+  type AvatarSyncResponse,
+} from "@/features/employees/avatar-sync.client";
 import { useAvatarRenderPipeline } from "@/features/employees/useAvatarRenderPipeline";
 import type { EmployeeSessionBootstrapDTO } from "@/features/employees/types";
 
@@ -75,6 +79,8 @@ export function EmployeeInteractionPage({
     Boolean(bootstrap.employee.videoPreview?.src);
 
   const avatarBootstrap = React.useMemo(() => toAvatarBootstrap(bootstrap), [bootstrap]);
+
+  const avatarVoiceMode = bootstrap.avatarVoiceMode ?? "realtime";
 
   const avatarPipelineEnabled = Boolean(bootstrap.avatarRenderPipelineEnabled);
   const { notifyAssistantSegment, segmentOverlay, videoSegment } =
@@ -189,6 +195,9 @@ export function EmployeeInteractionPage({
   >(null);
   const [stubVoiceState, setStubVoiceState] = React.useState<VoiceUiState>("idle");
   const [transcriptBusy, setTranscriptBusy] = React.useState(false);
+  const [syncPlayback, setSyncPlayback] = React.useState<AvatarSyncResponse | null>(
+    null,
+  );
 
   const appendTranscriptMessage = React.useCallback(
     (m: InteractionMessage) => {
@@ -207,6 +216,16 @@ export function EmployeeInteractionPage({
   );
 
   const voiceUiEnabled = Boolean(realtimeVoiceEnabled);
+
+  const onAssistantSyncTurn = React.useCallback(
+    async (text: string) => {
+      const res = await postAvatarSyncClip({ employeeId, text });
+      if (!res.ok) throw new Error(res.error);
+      setSyncPlayback(res.body);
+    },
+    [employeeId],
+  );
+
   const {
     voiceState: realtimeVoiceState,
     voiceError: realtimeVoiceError,
@@ -222,12 +241,24 @@ export function EmployeeInteractionPage({
     appendTranscriptMessage,
     patchTranscriptMessage,
     maybeAutonameFromUserText,
-    onAssistantVoiceSegment: avatarPipelineEnabled
-      ? ({ text }) => {
-          notifyAssistantSegment(text);
-        }
-      : undefined,
+    avatarVoiceMode,
+    onAssistantSyncTurn:
+      avatarVoiceMode === "sync" ? onAssistantSyncTurn : undefined,
+    onAssistantVoiceSegment:
+      avatarVoiceMode === "realtime" && avatarPipelineEnabled
+        ? ({ text }) => {
+            notifyAssistantSegment(text);
+          }
+        : undefined,
   });
+
+  React.useEffect(() => {
+    if (avatarVoiceMode === "sync" && realtimeVoiceActive) {
+      if (realtimeVoiceState === "recording") {
+        setSyncPlayback(null);
+      }
+    }
+  }, [avatarVoiceMode, realtimeVoiceActive, realtimeVoiceState]);
 
   const processingTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -503,6 +534,10 @@ export function EmployeeInteractionPage({
                 ? digitalHumanState
                 : undefined
             }
+            syncPlayback={
+              avatarVoiceMode === "sync" ? syncPlayback : null
+            }
+            onSyncPlaybackEnd={() => setSyncPlayback(null)}
           />
           <AvatarPreviewSection
             employeeId={employeeId}

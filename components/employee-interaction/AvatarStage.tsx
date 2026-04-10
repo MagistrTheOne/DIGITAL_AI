@@ -10,8 +10,11 @@ import {
   avatarStateFooterHint,
   type AvatarState,
 } from "@/features/employees/avatar-digital-human.types";
+import type { AvatarSyncResponse } from "@/features/employees/avatar-sync.client";
 import type { AvatarSegmentOverlay } from "@/features/employees/useAvatarRenderPipeline";
 import type { EmployeeVideoPreview } from "@/features/employees/types";
+
+import { SyncAvatarPlaybackLayer } from "@/components/employee-interaction/SyncAvatarPlaybackLayer";
 
 function initials(name: string) {
   const p = name.trim().split(/\s+/).filter(Boolean);
@@ -30,6 +33,8 @@ export function AvatarStage({
   subscribeArachne,
   segmentOverlay,
   digitalHumanState,
+  syncPlayback,
+  onSyncPlaybackEnd,
 }: {
   displayName: string;
   videoPreview?: EmployeeVideoPreview;
@@ -40,6 +45,9 @@ export function AvatarStage({
   segmentOverlay?: AvatarSegmentOverlay | null;
   /** Optional: audio-first perception state (does not change layout). */
   digitalHumanState?: AvatarState;
+  /** Lip-sync mode: ElevenLabs audio + optional InfiniteTalk video (same turn). */
+  syncPlayback?: AvatarSyncResponse | null;
+  onSyncPlaybackEnd?: () => void;
 }) {
   const letter = initials(displayName);
   const src = videoPreview?.src?.trim();
@@ -150,6 +158,11 @@ export function AvatarStage({
             ) : null}
           </div>
         ) : null}
+
+        <SyncAvatarPlaybackLayer
+          payload={syncPlayback ?? null}
+          onPlaybackEnd={onSyncPlaybackEnd}
+        />
 
         {showStubOverlay ? (
           <div

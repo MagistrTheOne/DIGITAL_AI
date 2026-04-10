@@ -1,4 +1,5 @@
 import type { RenderStatus } from "./avatar-preview.types";
+import type { AvatarVoiceMode } from "./avatar-voice.types";
 
 export type EmployeeRoleCategory =
   | "CFO"
@@ -97,5 +98,9 @@ export type EmployeeSessionBootstrapDTO = {
   avatarRenderPipelineEnabled?: boolean;
   /** Default hybrid realtime→enhanced when pipeline is enabled (env `AVATAR_PIPELINE_HYBRID_ENHANCE_DEFAULT=1`). */
   avatarRenderHybridDefault?: boolean;
+  /**
+   * `realtime` = OpenAI audio (default); `sync` = OpenAI text + ElevenLabs + InfiniteTalk (env `NULLXES_AVATAR_VOICE_MODE=sync`).
+   */
+  avatarVoiceMode?: AvatarVoiceMode;
 };
 

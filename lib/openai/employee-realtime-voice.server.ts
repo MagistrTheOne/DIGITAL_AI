@@ -122,10 +122,14 @@ function getInputTranscriptionConfig(): { model: string; language?: string } {
   return lang ? { model, language: lang } : { model };
 }
 
+export type RealtimeAssistantOutput = "audio" | "text";
+
 export async function mintEmployeeRealtimeClientSecret(input: {
   displayName: string;
   role: string;
   config: EmployeeConfigJson;
+  /** `text` = sync/lip-sync path (no model audio); `audio` = default Realtime voice. */
+  assistantOutput?: RealtimeAssistantOutput;
 }): Promise<{
   clientSecret: string;
   expiresAt: number;
@@ -142,32 +146,50 @@ export async function mintEmployeeRealtimeClientSecret(input: {
   const voiceRaw = process.env.NULLXES_REALTIME_VOICE_ID?.trim();
   const voice = voiceRaw || "marin";
   const turnMode = getRealtimeVoiceTurnMode();
+  const assistantOutput: RealtimeAssistantOutput =
+    input.assistantOutput ?? "audio";
 
   const instructions =
     buildEmployeeSystemPrompt(input.displayName, input.role, input.config) +
-    "\n\nVoice session: answer in short, natural spoken sentences unless the user asks for depth or lists.";
+    (assistantOutput === "text"
+      ? "\n\nText session: reply in short, natural sentences suitable for speech synthesis; no markdown unless asked."
+      : "\n\nVoice session: answer in short, natural spoken sentences unless the user asks for depth or lists.");
+
+  const audioInput = {
+    format: { type: "audio/pcm" as const, rate: 24000 as const },
+    turn_detection: turnMode === "vad" ? buildRealtimeTurnDetection() : null,
+    transcription: getInputTranscriptionConfig(),
+    noise_reduction: { type: "far_field" as const },
+  };
+
+  const sessionPayload =
+    assistantOutput === "text"
+      ? {
+          type: "realtime" as const,
+          model,
+          instructions,
+          output_modalities: ["text"] as Array<"text" | "audio">,
+          audio: {
+            input: audioInput,
+          },
+        }
+      : {
+          type: "realtime" as const,
+          model,
+          instructions,
+          output_modalities: ["audio"] as Array<"text" | "audio">,
+          audio: {
+            input: audioInput,
+            output: {
+              format: { type: "audio/pcm" as const, rate: 24000 as const },
+              voice,
+            },
+          },
+        };
 
   const created = await openai.realtime.clientSecrets.create({
     expires_after: { anchor: "created_at", seconds: 600 },
-    session: {
-      type: "realtime",
-      model,
-      instructions,
-      output_modalities: ["audio"],
-      audio: {
-        input: {
-          format: { type: "audio/pcm", rate: 24000 },
-          turn_detection:
-            turnMode === "vad" ? buildRealtimeTurnDetection() : null,
-          transcription: getInputTranscriptionConfig(),
-          noise_reduction: { type: "far_field" },
-        },
-        output: {
-          format: { type: "audio/pcm", rate: 24000 },
-          voice,
-        },
-      },
-    },
+    session: sessionPayload,
   });
 
   return {
